@@ -1,0 +1,80 @@
+---
+title: "ExeterUQ MOGP - History Matching"
+author: "Danny Williamson"
+date: "06/05/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Preliminaries
+
+First we specify the directory where mogp is installed so that the python is correctly imported. Your directory will be different from mine.
+```{r}
+mogp_dir <- "~/Dropbox/BayesExeter/mogp_emulator"
+```
+
+```{r}
+source("BuildEmulatorDanny.R")
+source("HistoryMatching/HistoryMatching.R")
+source("HistoryMatching/impLayoutplot.R")
+```
+
+We load the same data looked at in the tutorial on building emulators.
+```{r}
+load("ConvectionModelExample.Rdata")
+head(tData)
+```
+
+Build an emulator.
+```{r}
+TestEm <- BuildNewEmulators(tData, HowManyEmulators = 3) 
+```
+
+### History matching example
+
+The history matching codes we have included target multiple implausibility, plotting, and analyses over many waves. They are also generalised for basis emulation which will be added to this repository soon. We do not yet have a simple function ```historyMatching()``` that implements the steps below with an sequence of waves of mogp emulators, so we take you through a step by step use of our history matching codes for a single wave below. Something more general that wraps the steps below for multiple waves will be written in a future update.
+
+The discrepancy variances for each output, the observations and the error on the observations are required for history matching.
+```{r}
+tDisc <- c(0.15,0.05,0.1)
+tObs <- c(306, 0.45, 12.4) 
+tObsErr <- c(0.15,0.05,0.1)
+```
+
+We generate a random sample in the parameter space and calculate the implausibility across all of the outputs simultaneously. We have included a time stamp to show how fast this is for 1 million samples thanks to mogp.
+```{r}
+sample_size <- 1000000
+nparam <- length(names(TestEm$fitting.elements$Design))
+Xp <- as.data.frame(2*randomLHS(sample_size, nparam)-1)
+names(Xp) <- names(TestEm$fitting.elements$Design)
+system.time(Timps <- ImplausibilityMOGP(NewData=Xp, Emulator=TestEm, Discrepancy=tDisc, Obs=tObs, ObsErr=tObsErr))
+```
+
+We collect the inputs and the implausibilities for each output into a matrix
+```{r}
+ImpData_wave1 = cbind(Xp, Timps)
+```
+
+and define some of the elements required for history matching. We need the number of outputs that can exceed the implausibility cutoff, the cutoff itself (often 3 by default in the literature), and the standard parameters of the model mapped to [-1,1].
+```{r}
+VarNames <- names(Xp)
+valmax = 0 #how many outputs can be above the implausibility cut off?
+cutoff_vec <- 3 #the implausibility cut off
+param.defaults.norm=rep(0,nparam) #the default parameters of the model (on [-1,1])
+```
+
+The sampled implausibilities are then used to find NROY space and to create matrices for plotting 2D projections of parameter space.
+```{r}
+ImpListM1 = CreateImpList(whichVars = 1:nparam, VarNames=VarNames, ImpData=ImpData_wave1, nEms=TestEm$mogp$n_emulators, whichMax=valmax+1)
+NROY1 <- which(rowSums(Timps <= cutoff_vec[1]) >= TestEm$mogp$n_emulators -valmax)
+length(NROY1)/dim(Xp)[1]
+```
+
+NROY density plots
+```{r}
+imp.layoutm11(ImpListM1,VarNames,VariableDensity=FALSE,newPDF=FALSE,the.title=paste("InputSpace_wave",WAVEN,".pdf",sep=""),newPNG=FALSE,newJPEG=FALSE,newEPS=FALSE,Points=matrix(param.defaults.norm,ncol=nparam))
+mtext(paste("Remaining space:",length(NROY1)/dim(Xp)[1],sep=""), side=1)
+```

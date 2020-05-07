@@ -1,0 +1,65 @@
+---
+title: "Leave-One-Out (LOO) diagnostics for GP emulators"
+author: "Victoria Volodina"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.height=3, fig.width=10)
+```
+
+The users of our software could be interested in producing a Leave-One-Out (LOO) diagnostocs plot. 
+
+First we start by loading all the necessary R packages and importing Python files
+from **mogp_emulator**.
+```{r}
+mogp_dir <- "~/Dropbox/BayesExeter/mogp_emulator"
+```
+
+```{r results='hide', message=FALSE, warning=FALSE}
+setwd('..')
+source('BuildEmulator/BuildEmulator.R')
+```
+
+In previous (need to specify) vignettes, we demonstrated how to construct a GP emulator with `mogp_emulator` functions. Therefore we only provide code with default settings. 
+
+We start by loading a `.Rdata` file, which contains a data frame object `tData`. The first three columns correspond to the input parameters, while the last three columns after the `Noise` correspond to the model outputs (metrics of interest).
+
+```{r}
+load("ConvectionModelExample.Rdata")
+names(tData)
+```
+
+We proceed to construct a GP emulator for all three model outputs.
+
+```{r results='hide', message=FALSE, warning=FALSE}
+TestEm <- BuildNewEmulators(tData = tData, HowManyEmulators = 3)
+```
+
+After generating a GP object, we perform Leave-One-Out (LOO) diagnostics. We specify our obtained GP object as `Emulators` argument of `LOO.plot` function. We define the index of the emulator for which we want to produce LOO diagnostics plot `which.emulator`, i.e. we are interested to produce diagnostics for the first emulator. `ParamNames` is a vector of names of input parameters.
+
+In the LOO diagnostics plot, the black dots and error bars show predictions together with two standard deviation prediction intervals, while the green/red points are the true model output coloured by whether or not the truth lies within the error bars.
+
+```{r}
+print(names(TestEm$fitting.elements$Design))
+tLOOs <- LOO.plot(Emulators = TestEm, which.emulator = 1,
+                  ParamNames = names(TestEm$fitting.elements$Design))
+```
+Modellers are interested to study these plots on the original parameter scale. With `LOO.plot` function, they have an option to specify `OriginalRange=TRUE`. Those ranges are read from a file containing the parameters ranges and whether the parameters are logged or not. The string that correspond to the name of this file is provided in `RangeFile'.
+
+
+```{r}
+tLOOs <- LOO.plot(Emulators = TestEm, which.emulator = 1,
+                  ParamNames = names(TestEm$fitting.elements$Design), 
+                  OriginalRanges = TRUE, RangeFile="ModelParam.R")
+```
+
+Modellers who are interested to perform history matching with our emulators, could be interested to add the information about the observation, `Obs`, and the observation error, `ObsErr`. 
+
+```{r}
+tLOOs <- LOO.plot(Emulators = TestEm, which.emulator = 1,
+                  ParamNames = names(TestEm$fitting.elements$Design), 
+                  OriginalRanges = TRUE, RangeFile="ModelParam.R", 
+                  Obs = 307.5, ObsErr = 0.1)
+```
+We specified observation value at 307.5 together with observation error at 0.1. The blue dashed lines correspond to the observation together with plus/minus two observation error.
