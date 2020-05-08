@@ -379,7 +379,7 @@ ValidationMOGP <- function(NewData, Emulators, which.emulator=1,
   # Description of a function goes here.
   lastCand <- which(names(tData)=="Noise")
   if(is.null(Predictions)) {
-    predict.object <- Emulators$mogp$predict(NewData[, 1:(lastCand-1)])
+    predict.object <- Emulators$mogp$predict(as.matrix(NewData[, 1:(lastCand-1)]))
     if(Emulators$mogp$n==1) {
       fit.MOGP <- cbind(predict.object$mean[1, ], 
                         predict.object$mean[1, ]-2*sqrt(predict.object$unc[1, ]), 
