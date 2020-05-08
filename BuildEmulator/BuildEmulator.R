@@ -337,6 +337,149 @@ virtual.LOO_MOGP <- function(mogp.emulator, lm.emulator) {
   return(fit)
 }
 
+ValidationMOGP <- function(NewData, Emulators, which.emulator=1,
+                           tData, ParamNames, 
+                           Predictions=NULL, 
+                           OriginalRanges = FALSE, 
+                           RangeFile=NULL, Obs=NULL, 
+                           ObsErr=NULL, ObsRange=FALSE) {
+  #' @description Function to generate validation plots together with predictions for
+  #' unseen data for a single emulator. Function also generates plots if predictions
+  #' are provided.
+  #' 
+  #' @param NewData a data frame of unseen data that contains input parameters together
+  #' with the model response of interest.
+  #' @param Emulators a list of emulators fit by BuildNewEmulators
+  #' @param which.emulator the index of the emulator you want predictions for.
+  #' @param tData This is the data frame that we used to construct emulator. The format should be D+1+Q where Q is the number of targets each occupying one of the last Q columns, D is the number of inputs occupying the first D columns. The D+1th column should be a vector of random normal numbers (between -1 and 1) called "Noise". We use it in our LM code to stop our algorithms overfitting by selecting signals by chance. All variables should have names.
+  #' @param Predictions A data frame with three columns with first column corresponding to posterior mean, 
+  #' and second and third columns corresponding to the minus and plus two standard deviations.
+  #'  If NULL then the predictions will be generated from emulator inside the function.
+  #' @param ParamNames a vector of names for parameters.
+  #' @param OriginalRanges. If TRUE, plots will be produced on the original parameter ranges
+  #' Those ranges will be read from a file containing the parameter ranges and whether the 
+  #' parameters are logged or not. Defaults to FALSE, where parameters will be plotted on [-1,1]
+  #' @param RangeFile A .R file that will be sourced in order to determine the ranges of the
+  #' parameters to be plotted and whether they are on a log scale or not. If NULL when OrignialRanges
+  #' is called, a warning is thrown and the plot is given on [-1,1]
+  #' @param Obs. The scalar value of the observations to be plotted as a dasked line if not NULL
+  #' @param ObsErr. Observation error (scalar). If this is NULL when obs is not NULL, a warning is thrown.
+  #' @param OriginalRanges. If TRUE, plots will be produced on the original parameter ranges
+  #' Those ranges will be read from a file containing the parameter ranges and whether the 
+  #' parameters are logged or not. Defaults to FALSE, where parameters will be plotted on [-1,1]
+  #' @param RangeFile A .R file that will be sourced in order to determine the ranges of the
+  #' parameters to be plotted and whether they are on a log scale or not. If NULL when OrignialRanges
+  #' is called, a warning is thrown and the plot is given on [-1,1]
+  #' @param ObsRange. Boolean to indicate if the plot window should have y ranges that include
+  #' obs uncertainty (defaults to FALSE to facilitate emulator diagnostics)
+  #' 
+  #' @return a data frame with three columns, with first column corresponding to posterior mean, 
+  #' and second and third columns corresponding to the minus and plus two standard deviations.
+  #' The function also generates validation plots.
+  # Description of a function goes here.
+  lastCand <- which(names(tData)=="Noise")
+  if(is.null(Predictions)) {
+    predict.object <- Emulators$mogp$predict(NewData[, 1:(lastCand-1)])
+    if(Emulators$mogp$n==1) {
+      fit.MOGP <- cbind(predict.object$mean[1, ], 
+                        predict.object$mean[1, ]-2*sqrt(predict.object$unc[1, ]), 
+                        predict.object$mean[1, ]+2*sqrt(predict.object$unc[1, ]))
+      } else {
+        fit.MOGP <- cbind(predict.object$mean[which.emulator, ], 
+                          predict.object$mean[which.emulator, ]-2*sqrt(predict.object$unc[which.emulator, ]), 
+                          predict.object$mean[which.emulator, ]+2*sqrt(predict.object$unc[which.emulator, ]))
+      }
+  } else {
+    fit.MOGP <- Predictions
+  }
+  if(ObsRange){
+    fit.MOGP <- rbind(fit.MOGP, c(Obs, Obs-2*ObsErr,Obs+2*ObsErr))
+  }
+  Design <- NewData[,Emulators$fitting.elements$ActiveIndices[[which.emulator]]]
+  y <- NewData[, which(names(NewData) == Emulators$fitting.elements$lm.object[[which.emulator]]$ResponseString)]
+  p <- length(ParamNames)
+  if(p<2){
+    par(mfrow = c(1, 1), mar=c(4, 4, 1, 1))
+  }
+  else if(p<3){
+    par(mfrow = c(1, 2), mar=c(4, 4, 1, 1))
+  }
+  else if(p<4){
+    par(mfrow = c(1, 3), mar=c(4, 4, 1, 1))
+  }
+  else if(p <5){
+    par(mfrow = c(2, 2), mar=c(4, 4, 1, 1))
+  }
+  else if(p<7){
+    par(mfrow = c(2, 3), mar=c(4, 4, 1, 1))
+  }
+  else if(p<10){
+    par(mfrow = c(3, 3), mar=c(4, 4, 1, 1))
+  }
+  else if(p<13){
+    par(mfrow = c(4, 3), mar=c(4, 4, 1, 1))
+  }
+  else if(p<=16){
+    par(mfrow = c(4, 4), mar=c(4, 4, 1, 1))
+  }
+  if(OriginalRanges){
+    if(is.null(RangeFile))
+      stop("Cannot plot on original ranges as no RangeFile Specified")
+    else{
+      tRanFile <- try(source(RangeFile), silent=TRUE)
+      if(inherits(tRanFile, "try-error"))
+        stop("Invalid RangeFile given")
+      if(!is.null(param.names)
+         & !is.null(param.lows)
+         & !is.null(param.highs)
+         & !is.null(param.defaults)
+         #& !is.null(which.logs)
+      ){
+        PlotOrder <- sapply(ParamNames, function(aName) which(param.names==aName))
+        #TRY LAPPLY IF THE ABOVE FAILS NEEDING NUMERIC VECTORS NOT STRINGS
+        #First cut design to just ParamNames in the order of ParamNames
+        DesignOrder <- sapply(ParamNames, function(aName) which(colnames(Design)==aName))
+        #Design order is a permutation with cut columns
+        if(is.list(DesignOrder))
+          DesignOrder <- unlist(DesignOrder)
+        PermutedDesign <- Design[,DesignOrder]
+        AllLogs <- rep(FALSE,length(param.names))
+        AllLogs[which.logs] <- TRUE
+        toInc <- which(names(PlotOrder)%in%colnames(PermutedDesign))
+        param.names <- param.names[PlotOrder[toInc]]
+        param.lows <- param.lows[PlotOrder[toInc]]
+        param.highs <- param.highs[PlotOrder[toInc]]
+        NewLogs <- AllLogs[PlotOrder[toInc]]
+        which.logs <- which(NewLogs)
+        Design <- DesignConvert(PermutedDesign, param.names = param.names, 
+                                param.lows = param.lows, param.highs = param.highs, 
+                                which.logs = which.logs)
+      }
+      else
+        stop("Ranges file doesnt define the right variables")
+    }
+  }
+  else{
+    which.logs <- c()
+  }
+  tlogs <- rep("",p)
+  tlogs[which.logs] <- "x"
+  for(i in 1:p) {
+    try(aplot <- ValidPlotNew(fit = fit.MOGP, x = Design[,i], 
+                              y=y, ObsRange = ObsRange, 
+                              main = "", cex.main=0.8,
+                              xlab=ParamNames[i], log=tlogs[i]), silent=TRUE)
+    if(!inherits(aplot, "try-error") & !is.null(Obs)){
+      abline(h=Obs, lty=2, col=4)
+      if(is.null(ObsErr))
+        warning("The observations do not have 0 error. Please add ObsErr else the plot will be misleading")
+      else{
+        abline(h=Obs+2*ObsErr, col=4, lty=2)
+        abline(h=Obs-2*ObsErr, col=4, lty=2)
+      }  }
+  }
+  return(fit.MOGP)
+}
 LOO.plot <- function(Emulators, which.emulator=1, ParamNames,
                      OriginalRanges = FALSE, RangeFile=NULL, Obs=NULL, 
                      ObsErr=NULL, ObsRange=FALSE) {
@@ -456,6 +599,13 @@ LOO.plot <- function(Emulators, which.emulator=1, ParamNames,
   }
   return(fit.loo)
 }
+
+
+
+
+
+
+
 
 ValidPlotNew <- function(fit, x, y, ObsRange=FALSE, ...){
   #' @param fit a data frame of emulator predictions. First column corresponds
