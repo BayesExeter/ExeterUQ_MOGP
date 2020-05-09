@@ -16,7 +16,7 @@ This vignette is aiming to demonstrate how to perform diagnostics for emulator o
 First we specify the directory where mogp is installed so that the python is correctly imported. Your directory will be different from mine.
 
 ```{r}
-mogp_dir <- "~/Dropbox/BayesExeter/mogp_emulator"
+mogp_dir <- "/Users/vvolodina/Documents/mogp_emulator"
 ```
 
 ```{r results='hide', message=FALSE, warning=FALSE}
@@ -46,16 +46,36 @@ TestEm <- BuildNewEmulators(tData = tData.train, HowManyEmulators = 3)
 
 ### Leave-One-Out (LOO) diagnostics
 
-After generating a GP object, we perform Leave-One-Out (LOO) diagnostics. We specify our obtained GP object as `Emulators` argument of `LOO.plot` function. We define the index of the emulator for which we want to produce LOO diagnostics plot `which.emulator`, i.e. we are interested to produce diagnostics for the third emulator. `ParamNames` is a vector of names of input parameters.
+After generating a GP object, we perform Leave-One-Out (LOO) diagnostics. We specify our obtained GP object as `Emulators` argument of `LOO.plot` function. We define the index of the emulator for which we want to produce LOO diagnostics plot `which.emulator`, i.e. we are interested to produce diagnostics for the first emulator. `ParamNames` is a vector of names of input parameters.
+
+```{r}
+tLOOs <- LOO.plot(Emulators = TestEm, which.emulator = 1,
+                  ParamNames = cands)
+print(head(tLOOs))
+```
+
 
 In the LOO diagnostics plot, the black dots and error bars show predictions together with two standard deviation prediction intervals, while the green/red points are the true model output coloured by whether or not the truth lies within the error bars.
 
 By calling `LOO.plot` function, we also obtain a data frame with three columns, with first column corresponding to posterior mean, and second and third columns corresponding to the minus and plus two standard deviations.
 
+We can change the order and/or the number of input parameters in `ParamNames` specification.
+
+```{r}
+tLOOs <- LOO.plot(Emulators = TestEm, which.emulator = 1,
+                  ParamNames = c("A_T", "A_U", "A_EPSILON"))
+```
+
+```{r, fig.height=3, fig.width=7}
+tLOOs <- LOO.plot(Emulators = TestEm, which.emulator = 1,
+                  ParamNames = c("A_T", "A_EPSILON"))
+```
+
+Notice that by choosing to produce LOO plot for the third emulator, we only have two input variables in our LOO diagnostics plots, since only these two input variables are active.
 ```{r}
 tLOOs <- LOO.plot(Emulators = TestEm, which.emulator = 3,
                   ParamNames = cands)
-print(head(tLOOs))
+head(TestEm$fitting$Design[, TestEm$fitting$ActiveIndices[[3]]])
 ```
 
 #### LOO plots on original scale
