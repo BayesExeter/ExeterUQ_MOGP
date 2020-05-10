@@ -17,7 +17,8 @@ mogp_dir <- "~/Dropbox/BayesExeter/mogp_emulator"
 ```
 
 ```{r}
-source("BuildEmulatorDanny.R")
+setwd('..')
+source("BuildEmulator/BuildEmulator.R")
 source("HistoryMatching/HistoryMatching.R")
 source("HistoryMatching/impLayoutplot.R")
 ```
