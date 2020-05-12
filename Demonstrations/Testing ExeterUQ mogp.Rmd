@@ -17,7 +17,7 @@ Here we demonstrate implementation of mogp for emulating multiple outputs with s
 
 First we specify the directory where mogp is installed so that the python is correctly imported. Your directory will be different from mine.
 ```{r}
-mogp_dir <- "~/Dropbox/BayesExeter/mogp_emulator"
+mogp_dir <- "/Users/vvolodina/Documents/mogp_emulator"
 ```
 
 ```{r}
