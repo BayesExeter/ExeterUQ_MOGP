@@ -1,0 +1,287 @@
+---
+title: "Functionalities of `mogp_emulator`"
+author: Eric Daub and Victoria Volodina
+date: "11/05/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.height=3, fig.width=10)
+```
+
+## `mogp_emulator`
+
+In this Markdown, we demonstrate the functionalities of  [`mogp_emulator`](https://github.com/alan-turing-institute/mogp_emulator), a Python package for fitting Gaussian Process Emulators to computer simulator outputs. This demo is fully based on the `gp_demo.R` available from [the Alan Turing Institute GitHub repository](https://github.com/alan-turing-institute/mogp_emulator/tree/devel/mogp_emulator/demos) and written by Eric Daub. For more detailed information about all the functions of `mogp_emulator`, please visit [Multi-Output GP Emulator 0.2.0 documentation](https://mogp-emulator.readthedocs.io/en/latest/MultiOutputGP.html).
+
+### Preliminaries
+
+We start by specifying the directory where `mogp_emulator` is installed so that the python is correctly imported. Please note that your directory will be different from mine.
+
+```{r}
+mogp_dir <- "~/Dropbox/BayesExeter/mogp_emulator"
+```
+
+```{r results='hide', message=FALSE, warning=FALSE}
+setwd('..')
+source('BuildEmulator/BuildEmulator.R')
+```
+
+## `GaussianProcess` class
+
+We start by considering how to construct a GP emulator for a single output.
+
+### Data
+
+We proceed to create some data of size 10 with two inputs `x_1` and `x_2` and output `y`. We store the inputs and output values in a data frame `x`.
+
+```{r}
+n_train <- 10
+x_scale <- 2.
+x1 <- runif(n_train)*x_scale
+x2 <- runif(n_train)*x_scale
+y1 <- exp(-x1**2 - x2**2)
+x <- data.frame(x1, x2, y1)
+head(x)
+```
+
+To construct an emulator object, `mogp_emulator` requires data (inputs and output(s) values) as a matrix, but often you may want to construct a regression to obtain the form of the regression functions, i.e. $h(x_i), i=1, \dots, q$, using a data frame in `R`. To do this, we can split this data frame into `inputs`, `targets`, and a `dictionary` mapping column names to integer indices (note in `Python` starting from zero) using the function `extract_targets`. 
+
+```{r}
+target_list <- extract_targets(x, target_cols = c("y1"))
+
+inputs <- target_list[[1]]
+targets <- target_list[[2]]
+inputdict <- target_list[[3]]
+```
+
+```{r}
+print(inputs)
+print(targets)
+print(inputdict)
+```
+
+### Model specification
+
+We can specify the mean function formula as a string. This formula specification is adopted in `R`. Note that we include both inputs and their first-order interaction inside the mean function.
+
+```{r}
+mean_func <- "y1 ~ x1 + x2 + I(x1*x2)"
+```
+
+Priors are specified by giving a list of prior objects (or NULL if you wish to use weak prior information). Each distribution has some parameters to set `NormalPrior` is `(mean, std)`, `Gamma` is `(shape, scale)`, and `InvGammaPrior` is `(shape, scale)`.
+
+If you don't know how many parameters you need to specify, it depends on
+the mean function and the number of input dimensions. Mean functions
+have a fixed number of parameters (though in some cases this can depend
+on the dimension of the inputs as well), and then covariance functions have
+one correlation length per input dimension plus a covariance scale and
+a nugget parameter.
+
+If in doubt, you can create the GP instance with no priors, use `gp$n_params`
+to get the number, and then set the priors manually using `gp$priors <- priors`
+
+In this case, we have 4 mean function parameters (normal distribution on a
+linear scale), 2 correlations lengths (normal distribution on a log scale,
+so lognormal), a sigma^2 covariance parameter (inverse gamma) and a nugget
+(Gamma). If you choose an adaptive or fixed nugget, the nugget prior is ignored.
+
+```{r}
+priors <- list(mogp_priors$NormalPrior(0., 1.),
+               mogp_priors$NormalPrior(0., 1.),
+               mogp_priors$NormalPrior(0., 1.),
+               mogp_priors$NormalPrior(0., 1.),
+               mogp_priors$NormalPrior(0., 1.),
+               mogp_priors$NormalPrior(0., 1.),
+               mogp_priors$InvGammaPrior(2., 1.), 
+               mogp_priors$GammaPrior(1., 0.2))
+```
+
+
+### Create a GP instance
+
+We proceed to create the GP instance. We start by fitting a single output emulator and therefore we use `GaussianProcess` class. 
+ 
+Note that we provide a fixed value for the nugget. However, we have an option to set `nugget="adaptive"`, to make the noise only as large as necessary
+to successfully invert the covariance matrix, while `nugget="fit"` to treat nugget as GP hyperparameter that we are interested to estimate.
+```{r}
+gp <- mogp_emulator$GaussianProcess(inputs, targets,
+                                    mean=mean_func,
+                                    priors=priors,
+                                    nugget=0.0001,
+                                    inputdict=inputdict)
+
+```
+
+`gp` is fit using `fit_GP_MAP` function. It accepts an object of `GaussianProcess` class or `MultiOutputGP` class and returns the same type of object with the hyperparameters fit via MAP (maximum a posteriori) estimation.
+
+```{r}
+gp <- mogp_emulator$fit_GP_MAP(gp)
+```
+
+
+```{r}
+names(gp)
+```
+
+We derive the information about the current value of log-posterior (`current_logpost`) computed at the current values of GP model hyperparameters (`theta`).
+
+```{r}
+print(gp$current_logpost)
+```
+
+Note that the first four values of a vector `params` correspond to the regression coefficients computed on a linear scale (no transformation). Meanwhile, the remaining four values of a vector `params` correspond to two correlation length parameters values, sigma^ and a nugget computed on a log scale. We have to negate and then exponentiate these values to obtain these values on a linear scale.
+
+```{r}
+print(gp$theta)
+
+params <- gp$theta
+# Regression coefficients (parameters on a linear scale)
+print(params[1:4])
+# Correlation length, sigma^2 and nugget (parameters on a log scale)
+print(exp(-params[5:length(params)]))
+```
+
+Another important remark is that the nugget value provided in the `params` cannot be trusted if you provided a fixed value in your GP instance specification. If you want to check your nugget value, do the following
+
+```{r}
+print(gp$nugget)
+```
+
+
+### Predictions
+
+Now create some test data to make predictions and compare with unknown values
+
+```{r}
+n_test <- 10000
+
+x1_test <- runif(n_test)*x_scale
+x2_test <- runif(n_test)*x_scale
+
+x_test <- cbind(x1_test, x2_test)
+y_actual <- exp(-x1_test**2 - x2_test**2)
+
+y_predict <- gp$predict(x_test)
+```
+
+`y_predict` is an object holding the mean, variance and derivatives (if computed).
+Users can assess the values via `y_predict$mean`, `y_predict$unc`, and `y_predict$deriv`. We compute a root mean squared value (RMSE). In our example, this value is small and close to zero, which indicates the accuracy in prediction of obtained emulator.
+
+```{r}
+print(sqrt(sum((y_actual - y_predict$mean)**2)/n_test))
+```
+
+
+## `MultiOutputGP` class
+
+We proceed to construct two emulators for two outputs using `MultiOutputGP` class.
+
+### Data
+
+We start by generating data and making sure that it is in a right format.
+
+```{r}
+y2 <- sin(x1)+exp(x2)*2
+x <- data.frame(x1, x2, y1, y2)
+target_list <- extract_targets(x, target_cols = c("y1", "y2"))
+inputs <- target_list[[1]]
+targets <- target_list[[2]]
+inputdict <- target_list[[3]]
+```
+
+As before, we split a data frame into `inputs`, which is a matrix with its columns corresponding to inputs' values.
+
+```{r}
+head(inputs)
+```
+
+`targets` is matrix where each row corresponds to one of the outputs.
+
+```{r}
+print(targets)
+```
+
+Finally, `dictionary` contains the mapping of column names to integer indices. Note that indices start from 0, since `mogp_emulator` is a Python package.
+
+```{r}
+print(inputdict)
+```
+
+### Model specification
+
+`MultiOutputGP` has an option to specify mean function, priors, kernel type and nugget treatment for each emulator. For mean function specification, we creat a list with two string formulaes.
+
+```{r}
+mean_func <- list("y ~ x1 + x2 + I(x1*x2)", 
+                  "y ~ x1 + x2 + I(x1^3)")
+```
+
+For prior specification, we can provide a list of lists of priors or none.
+
+```{r}
+priors_mult <- list(priors, priors)
+```
+
+We can specify different form of kernel for each emulator (squared exponential or Matern52), i.e.
+
+```{r}
+kernel_mult <- list(mogp_kernels$SquaredExponential(), 
+                    mogp_kernels$Matern52())
+```
+
+Finally, we can treat nugget in a different way for each emulator.
+
+```{r}
+nugget_mult <- list(0.0001, "adaptive")
+```
+
+
+### Create a GP instance
+
+```{r}
+gp_multi <- mogp_emulator$MultiOutputGP(inputs, targets, 
+                                        inputdict = inputdict, 
+                                        mean = mean_func, 
+                                        priors = priors_mult, 
+                                        nugget=nugget_mult)
+
+```
+
+`gp_multi` is fit using `fit_GP_MAP` function. It accepts an object of class `MultiOutputGP` class and returns the same type of object with hyperparameters fit via MAP (maximum a posteriori) estimation
+
+```{r}
+gp_multi <- mogp_emulator$fit_GP_MAP(gp_multi)
+names(gp_multi)
+```
+
+All the information about each individual emulator is stored in `gp_multi$emulators`, which is a list. For example, here is all the information about an emulator for the first output, `y_1`.
+
+
+```{r}
+names(gp_multi$emulators[[1]])
+```
+
+### Predictions
+
+We can generate predictions using these two emulators. We create some test data to make predictions and compate with unknown values.
+
+```{r}
+n_test <- 10000
+
+x1_test <- runif(n_test)*x_scale
+x2_test <- runif(n_test)*x_scale
+
+x_test <- cbind(x1_test, x2_test)
+y1_actual <- exp(-x1_test**2 - x2_test**2)
+y2_actual <- sin(x1_test) + exp(x2_test)*2
+
+y_predict <- gp_multi$predict(x_test)
+```
+
+We proceed to compute RMSE for the first emulator and second emulator
+
+```{r}
+print(sqrt(sum((y1_actual - y_predict$mean[1, ])**2)/n_test))
+print(sqrt(sum((y2_actual - y_predict$mean[2, ])**2)/n_test))
+```
+
