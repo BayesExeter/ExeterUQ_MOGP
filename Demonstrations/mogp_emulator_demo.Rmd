@@ -18,7 +18,7 @@ In this Markdown, we demonstrate the functionalities of  [`mogp_emulator`](https
 We start by specifying the directory where `mogp_emulator` is installed so that the python is correctly imported. Please note that your directory will be different from mine.
 
 ```{r}
-mogp_dir <- "/Users/vvolodina/Documents/mogp_emulator"
+mogp_dir <- "~/Dropbox/BayesExeter/mogp_emulator"
 ```
 
 ```{r results='hide', message=FALSE, warning=FALSE}

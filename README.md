@@ -7,4 +7,4 @@ Specifically, we are using the implementation that allows for custom prior speci
 
 This repository offers our own custom default subjective prior specification, designed to be as similar as possible to the ExeterUQ code: https://github.com/BayesExeter/ExeterUQ that is used by many groups for climate model tuning.
 
-We provide methods for easy customisable emulation, diagnostics and history matching. The following tutorial shows how to get started with a custom emulation, including setting up your data so that it is compatible.
+We provide methods for easy customisable emulation, diagnostics and history matching. Work through the demonstrations: first to see how mogp works through the ```mogp_emulator_demo.Rmd```, then build an ExeterUQ_mogp through ```Testing-ExeterUQ-mogp.Rmd```. Learn how diagnostics work with ```mogp_emulator_diagnostics.Rmd``` and see history matching through ```HistoryMatchingwithExeterUQ.Rmd```.

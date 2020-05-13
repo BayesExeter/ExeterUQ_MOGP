@@ -1,0 +1,158 @@
+---
+title: "ExeterUQ MOGP - Building emulators"
+author: "Danny Williamson"
+date: "06/05/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE,fig.height=3, fig.width=10)
+```
+
+## Exeter UQ mogp
+
+Here we demonstrate implementation of mogp for emulating multiple outputs with subjective priors and complex mean functions.
+
+### Preliminaries
+
+First we specify the directory where mogp is installed so that the python is correctly imported. Your directory will be different from mine.
+```{r}
+mogp_dir <- "~/Dropbox/BayesExeter/mogp_emulator"
+```
+
+```{r}
+setwd("..")
+source("BuildEmulator/BuildEmulator.R")
+```
+This source should add the required package dependencies. Many of these are for plotting for types of UQ not yet available with this simple mogp implementation (like Basis emulation), but coming soon here.
+
+### Data format
+
+Our implementation of mogp is so simple to engage with for users because a lot of the complicated specification is handled inside the code using the structure of the data object. Here is a compatible data set:
+```{r}
+load("ConvectionModelExample.Rdata")
+head(tData)
+```
+The data here are simulations from a single column convection model. There are some very important features of the data structure:
+
+1. It is called ```tData```.
+2. The columns are named.
+3. The columns before ```Noise``` are the input variables.
+4. The columns after ```Noise``` are the output variables.
+5. The ```Noise``` column is there and is a vector of random draws from a simple distribution. We often use ```rnorm(N,0,0.5)``` to have values in the region [-1,1] (not completely restricted), but uniform [-1,1] would work fine too.
+6. The inputs have been scaled to [-1,1]. It is fine to use other scalings with our code (e.g. [0,1]), but we use [-1,1] in practice and our history matching plotting code normally relies on this fact. We would advise scaling to [-1,1] as this makes sense with our prior specification.
+
+To engage with our code with your own data, simply create this "Noise" vector with ```rnorm``` (or your favourite random number generator) and then stitch your inputs outputs and noise together with (not evaluated):
+```{r, eval=FALSE}
+tData <- cbind(inputs, Noise, outputs)
+```
+### Building mogp emulators
+The call to build a default mogp emulator is below. It will build our custom mogp emulator for all 3 outputs simultaneously, using all of our default specifications for kernels, means etc. The visable output represents the fitting of our custom mean functions to each output. For those experienced statisiticians you can get an idea of what the key features of the data are from looking at this output.
+```{r}
+TestEm <- BuildNewEmulators(tData, HowManyEmulators = 3) 
+```
+ The models here are accessible as part of the output of BuildNewEmulators.
+```{r}
+names(TestEm)
+```
+The ```mogp``` element is the mogp emulator; a multi-output emulator that can be evaluated for millions of predictions across all outputs incredibly quickly (about 5s per million predictions on my laptop for this data). 
+
+To run your own predictions, the call is
+```{r}
+newDesign <- 2*randomLHS(10000,3)-1
+preds <- TestEm$mogp$predict(newDesign, deriv=FALSE)
+```
+
+You get access to the mean via
+```{r}
+tmean <- preds$mean
+dim(tmean)
+```
+where the mean is ```HowManyEmulators``` by ```10000```. The variance is
+
+```{r}
+tvar <- preds$unc
+dim(tvar)
+```
+with the same dimensions as the mean. There are no customisation in this repository for prediction. I.e. you can engage with TestEm$mogp as with any mogp object.
+
+The ```fitting.elements``` part contains the control options that were used in the fitting (and these can be changed as inputs to BuildNewEmulators), and can help with diagnostics
+```{r}
+names(TestEm$fitting.elements)
+```
+- The ```lm.object``` contains a list of the mean functions that were fitted, one for each emulator. Useful to see what parameters are involved, how global the fit is, etc.
+- ```Design``` is the design matrix and is useful for plotting
+- ```ActiveIndices``` is a list of vectors of indices that indicate which inputs were used in each emulator (you don't always want to fit on all inputs and in particular in 10-20 dimensions!)
+- ```PriorChoices``` is a list of the prior choices that were used in the fitting of each emulator. Some are explained below and the code itself documents these carefully.
+
+### Validation and customisation
+
+A separate vignette will present diagnostic plotting more thoroughly. Leave one outs are available via
+```{r}
+tLOOs <- LOO.plot(Emulators = TestEm, which.emulator = 1,
+                  ParamNames = names(TestEm$fitting.elements$Design))
+```
+
+If there are issues with the fit, or even if you want to change some of our custom settings, we offer some of the basics here and a more detailed tutorial will come soon. You can also read the documentation in our code which is detailed and justifies many of our prior choices.
+
+#### Different mean functions
+Many prefer not to have custom mean functions, but to use linear means. The option ```meanFun``` in ```BuildNewEmulators``` allows this as follows
+```{r}
+TestEmLinear <- BuildNewEmulators(tData, 3,additionalVariables = names(tData)[1:3], meanFun = "linear")
+```
+The default option is ```meanFun="fitted"``` which engages our customised fitting code. For example
+
+```{r}
+summary(TestEmLinear$fitting.elements$lm.object[[1]]$linModel)
+```
+
+We do not *yet* have custom formulae in this interface, but the implementation is simple and is coming as mogp does allow for this. The difficulty with custom mean functions is customising for multiple outputs automatically.
+
+The fitting of our mean functions broadly follows a forwards and backwards stepwise regression using the Draper and Smith (1989) and is described in a number of places (Williamson et al. 2013, Climate Dynamics is one place). However, we offer a lot of control over this through the control parameters.
+The default controls are here:
+```{r}
+choices.default
+```
+
+To expand the search for good mean functions to include periodic terms set
+```{r}
+choices.new <- choices.default
+choices.new$lm.tryFouriers=TRUE
+```
+
+To cap the order of fitted polynomial, say to quadratic
+```{r}
+choices.new$lm.maxOrder = 2
+```
+
+To expand or reduce the number of degrees of freedom that can be used in fitting a mean function, say to set it to 4
+```{r}
+choices.new$lm.maxdf = 4
+```
+
+Changed choices are then inputted as
+```{r, eval=FALSE}
+newTest <- BuildNewEmulators(tData, HowManyEmulators = 3, Choices = choices.new) 
+```
+
+#### Different Kernels
+
+An mogp defaults to squared exponential kernels and these are given type ```"Gaussian"```. A number of other kernels are made available with mogp too. Currently we have made the matern 52 available and more can be added on request if compatible with mogp. Custom kernels added to your own mogp installation could be supported in the future.
+
+To specify the kernel for each emulator an example call is
+```{r, eval=FALSE}
+newTest <- BuildNewEmulators(tData, HowManyEmulators = 3, kernel = c("Gaussian", "Gaussian", "Matern52")) 
+```
+
+Note that specifying a single name will recycle the named kernel over all emulators.
+
+#### Changing prior distributions
+
+The Choices list controls all of the hyperparameters for the priors we use. Another vignette will be used to demonstrate the priors we have used and to explore and justify them. The code itself is well documented and our choice of prior is given and defaults are justified. Our main goal with these priors is to penalise the ridge on the likelihood surface of the GP to ensure we have a posterior predictive model that does not revert quickly to a non-informative prior and is therefore very poor at extrapolation. Our 2nd goal is to model active and inactive inputs differently.
+
+We have not made changing the prior distribution types available, though a bespoke use of mogp allows for this within a few coded distributional classes. We do allow different default hyperparameters to be passed. For example, one can inflate the prior variance on all regression parameters via
+```{r}
+choices.new$BetaRegressSigma = 100
+```
+
+The code itself documents the other options and what they can be changed to.

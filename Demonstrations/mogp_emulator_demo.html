@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 
-<html>
+<html xmlns="http://www.w3.org/1999/xhtml">
 
 <head>
 
 <meta charset="utf-8" />
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
@@ -331,7 +332,6 @@ summary {
   border: none;
   display: inline-block;
   border-radius: 4px;
-  background-color: transparent;
 }
 
 .tabset-dropdown > .nav-tabs.nav-tabs-open > li {
@@ -376,7 +376,7 @@ summary {
 <div id="preliminaries" class="section level3">
 <h3>Preliminaries</h3>
 <p>We start by specifying the directory where <code>mogp_emulator</code> is installed so that the python is correctly imported. Please note that your directory will be different from mine.</p>
-<pre class="r"><code>mogp_dir &lt;- &quot;/Users/vvolodina/Documents/mogp_emulator&quot;</code></pre>
+<pre class="r"><code>mogp_dir &lt;- &quot;~/Dropbox/BayesExeter/mogp_emulator&quot;</code></pre>
 <pre class="r"><code>setwd('..')
 source('BuildEmulator/BuildEmulator.R')</code></pre>
 </div>
@@ -394,13 +394,13 @@ x2 &lt;- runif(n_train)*x_scale
 y1 &lt;- exp(-x1**2 - x2**2)
 x &lt;- data.frame(x1, x2, y1)
 head(x)</code></pre>
-<pre><code>##           x1        x2          y1
-## 1 1.26949161 0.7546416 0.112918061
-## 2 0.29532968 1.9165558 0.023274291
-## 3 0.07705112 0.6676863 0.636518437
-## 4 1.60940522 0.9739881 0.029047062
-## 5 1.65116163 1.5498013 0.005927108
-## 6 1.68125281 0.8391709 0.029280932</code></pre>
+<pre><code>##          x1        x2         y1
+## 1 0.3348261 0.9657521 0.35176724
+## 2 1.2543860 1.4894537 0.02255143
+## 3 1.6524514 0.4281663 0.05426249
+## 4 0.7357227 0.3714971 0.50697279
+## 5 0.8177281 0.0757399 0.50945397
+## 6 1.4634006 1.5477902 0.01070338</code></pre>
 <p>To construct an emulator object, <code>mogp_emulator</code> requires data (inputs and output(s) values) as a matrix, but often you may want to construct a regression to obtain the form of the regression functions, i.e. <span class="math inline">\(h(x_i), i=1, \dots, q\)</span>, using a data frame in <code>R</code>. To do this, we can split this data frame into <code>inputs</code>, <code>targets</code>, and a <code>dictionary</code> mapping column names to integer indices (note in <code>Python</code> starting from zero) using the function <code>extract_targets</code>.</p>
 <pre class="r"><code>target_list &lt;- extract_targets(x, target_cols = c(&quot;y1&quot;))
 
@@ -409,19 +409,19 @@ targets &lt;- target_list[[2]]
 inputdict &lt;- target_list[[3]]</code></pre>
 <pre class="r"><code>print(inputs)</code></pre>
 <pre><code>##             [,1]      [,2]
-##  [1,] 1.26949161 0.7546416
-##  [2,] 0.29532968 1.9165558
-##  [3,] 0.07705112 0.6676863
-##  [4,] 1.60940522 0.9739881
-##  [5,] 1.65116163 1.5498013
-##  [6,] 1.68125281 0.8391709
-##  [7,] 0.57324345 0.9815725
-##  [8,] 1.08682307 1.4907121
-##  [9,] 0.36783155 0.2217572
-## [10,] 1.53209259 0.5890255</code></pre>
+##  [1,] 0.33482606 0.9657521
+##  [2,] 1.25438602 1.4894537
+##  [3,] 1.65245142 0.4281663
+##  [4,] 0.73572267 0.3714971
+##  [5,] 0.81772810 0.0757399
+##  [6,] 1.46340061 1.5477902
+##  [7,] 0.01231338 1.3506812
+##  [8,] 0.85116456 1.3887041
+##  [9,] 1.83515592 1.0935163
+## [10,] 0.62340719 0.4289697</code></pre>
 <pre class="r"><code>print(targets)</code></pre>
-<pre><code>##  [1] 0.112918061 0.023274291 0.636518437 0.029047062 0.005927108 0.029280932
-##  [7] 0.274695365 0.033259764 0.831539650 0.067592463</code></pre>
+<pre><code>##  [1] 0.35176724 0.02255143 0.05426249 0.50697279 0.50945397 0.01070338
+##  [7] 0.16129969 0.07044098 0.01042472 0.56402790</code></pre>
 <pre class="r"><code>print(inputdict)</code></pre>
 <pre><code>## {'x1': 0, 'x2': 1}</code></pre>
 </div>
@@ -454,25 +454,27 @@ inputdict &lt;- target_list[[3]]</code></pre>
 <p><code>gp</code> is fit using <code>fit_GP_MAP</code> function. It accepts an object of <code>GaussianProcess</code> class or <code>MultiOutputGP</code> class and returns the same type of object with the hyperparameters fit via MAP (maximum a posteriori) estimation.</p>
 <pre class="r"><code>gp &lt;- mogp_emulator$fit_GP_MAP(gp)</code></pre>
 <pre class="r"><code>names(gp)</code></pre>
-<pre><code>##  [1] &quot;current_logpost&quot; &quot;D&quot;               &quot;fit&quot;             &quot;get_K_matrix&quot;   
-##  [5] &quot;inputs&quot;          &quot;invQt&quot;           &quot;kernel&quot;          &quot;L&quot;              
-##  [9] &quot;logpost_deriv&quot;   &quot;logpost_hessian&quot; &quot;logposterior&quot;    &quot;mean&quot;           
-## [13] &quot;n&quot;               &quot;n_params&quot;        &quot;nugget&quot;          &quot;nugget_type&quot;    
-## [17] &quot;predict&quot;         &quot;priors&quot;          &quot;targets&quot;         &quot;theta&quot;</code></pre>
+<pre><code>##  [1] &quot;current_logpost&quot; &quot;D&quot;               &quot;fit&quot;            
+##  [4] &quot;get_K_matrix&quot;    &quot;inputs&quot;          &quot;invQt&quot;          
+##  [7] &quot;kernel&quot;          &quot;L&quot;               &quot;logpost_deriv&quot;  
+## [10] &quot;logpost_hessian&quot; &quot;logposterior&quot;    &quot;mean&quot;           
+## [13] &quot;n&quot;               &quot;n_params&quot;        &quot;nugget&quot;         
+## [16] &quot;nugget_type&quot;     &quot;predict&quot;         &quot;priors&quot;         
+## [19] &quot;targets&quot;         &quot;theta&quot;</code></pre>
 <p>We derive the information about the current value of log-posterior (<code>current_logpost</code>) computed at the current values of GP model hyperparameters (<code>theta</code>).</p>
 <pre class="r"><code>print(gp$current_logpost)</code></pre>
-<pre><code>## [1] -5.405373</code></pre>
+<pre><code>## [1] -6.54534</code></pre>
 <p>Note that the first four values of a vector <code>params</code> correspond to the regression coefficients computed on a linear scale (no transformation). Meanwhile, the remaining four values of a vector <code>params</code> correspond to two correlation length parameters values, sigma^ and a nugget computed on a log scale. We have to negate and then exponentiate these values to obtain these values on a linear scale.</p>
 <pre class="r"><code>print(gp$theta)</code></pre>
-<pre><code>## [1]  1.0388091 -0.4252701 -0.5573952  0.2503438 -0.6957847 -0.6115509 -1.6310732
-## [8]  1.4824751</code></pre>
+<pre><code>## [1]  0.6622459 -0.6363393 -0.3100674  0.3624808 -1.7288859 -0.3191243
+## [7] -1.6666511  1.9119749</code></pre>
 <pre class="r"><code>params &lt;- gp$theta
 # Regression coefficients (parameters on a linear scale)
 print(params[1:4])</code></pre>
-<pre><code>## [1]  1.0388091 -0.4252701 -0.5573952  0.2503438</code></pre>
+<pre><code>## [1]  0.6622459 -0.6363393 -0.3100674  0.3624808</code></pre>
 <pre class="r"><code># Correlation length, sigma^2 and nugget (parameters on a log scale)
 print(exp(-params[5:length(params)]))</code></pre>
-<pre><code>## [1] 2.005282 1.843288 5.109355 0.227075</code></pre>
+<pre><code>## [1] 5.6343729 1.3759224 5.2944074 0.1477882</code></pre>
 <p>Another important remark is that the nugget value provided in the <code>params</code> cannot be trusted if you provided a fixed value in your GP instance specification. If you want to check your nugget value, do the following</p>
 <pre class="r"><code>print(gp$nugget)</code></pre>
 <pre><code>## [1] 1e-04</code></pre>
@@ -491,7 +493,7 @@ y_actual &lt;- exp(-x1_test**2 - x2_test**2)
 y_predict &lt;- gp$predict(x_test)</code></pre>
 <p><code>y_predict</code> is an object holding the mean, variance and derivatives (if computed). Users can assess the values via <code>y_predict$mean</code>, <code>y_predict$unc</code>, and <code>y_predict$deriv</code>. We compute a root mean squared value (RMSE). In our example, this value is small and close to zero, which indicates the accuracy in prediction of obtained emulator.</p>
 <pre class="r"><code>print(sqrt(sum((y_actual - y_predict$mean)**2)/n_test))</code></pre>
-<pre><code>## [1] 0.03757322</code></pre>
+<pre><code>## [1] 0.05443107</code></pre>
 </div>
 </div>
 <div id="multioutputgp-class" class="section level2">
@@ -508,21 +510,21 @@ targets &lt;- target_list[[2]]
 inputdict &lt;- target_list[[3]]</code></pre>
 <p>As before, we split a data frame into <code>inputs</code>, which is a matrix with its columns corresponding to inputs’ values.</p>
 <pre class="r"><code>head(inputs)</code></pre>
-<pre><code>##            [,1]      [,2]
-## [1,] 1.26949161 0.7546416
-## [2,] 0.29532968 1.9165558
-## [3,] 0.07705112 0.6676863
-## [4,] 1.60940522 0.9739881
-## [5,] 1.65116163 1.5498013
-## [6,] 1.68125281 0.8391709</code></pre>
+<pre><code>##           [,1]      [,2]
+## [1,] 0.3348261 0.9657521
+## [2,] 1.2543860 1.4894537
+## [3,] 1.6524514 0.4281663
+## [4,] 0.7357227 0.3714971
+## [5,] 0.8177281 0.0757399
+## [6,] 1.4634006 1.5477902</code></pre>
 <p><code>targets</code> is matrix where each row corresponds to one of the outputs.</p>
 <pre class="r"><code>print(targets)</code></pre>
-<pre><code>##           [,1]        [,2]      [,3]       [,4]         [,5]       [,6]
-## [1,] 0.1129181  0.02327429 0.6365184 0.02904706  0.005927108 0.02928093
-## [2,] 5.2086482 13.88606808 3.9764170 6.29622635 10.417840754 5.62280025
-##           [,7]       [,8]      [,9]      [,10]
-## [1,] 0.2746954 0.03325976 0.8315396 0.06759246
-## [2,] 5.8796585 9.76566558 2.8561293 4.60371383</code></pre>
+<pre><code>##           [,1]       [,2]       [,3]      [,4]     [,5]        [,6]
+## [1,] 0.3517672 0.02255143 0.05426249 0.5069728 0.509454  0.01070338
+## [2,] 5.5821298 9.81970305 4.06555061 3.5709304 2.886958 10.39637899
+##           [,7]       [,8]       [,9]     [,10]
+## [1,] 0.1612997 0.07044098 0.01042472 0.5640279
+## [2,] 7.7324210 8.77134942 6.93476198 3.6551540</code></pre>
 <p>Finally, <code>dictionary</code> contains the mapping of column names to integer indices. Note that indices start from 0, since <code>mogp_emulator</code> is a Python package.</p>
 <pre class="r"><code>print(inputdict)</code></pre>
 <pre><code>## {'x1': 0, 'x2': 1}</code></pre>
@@ -553,11 +555,13 @@ names(gp_multi)</code></pre>
 <pre><code>## [1] &quot;D&quot;           &quot;emulators&quot;   &quot;n&quot;           &quot;n_emulators&quot; &quot;predict&quot;</code></pre>
 <p>All the information about each individual emulator is stored in <code>gp_multi$emulators</code>, which is a list. For example, here is all the information about an emulator for the first output, <code>y_1</code>.</p>
 <pre class="r"><code>names(gp_multi$emulators[[1]])</code></pre>
-<pre><code>##  [1] &quot;current_logpost&quot; &quot;D&quot;               &quot;fit&quot;             &quot;get_K_matrix&quot;   
-##  [5] &quot;inputs&quot;          &quot;invQt&quot;           &quot;kernel&quot;          &quot;L&quot;              
-##  [9] &quot;logpost_deriv&quot;   &quot;logpost_hessian&quot; &quot;logposterior&quot;    &quot;mean&quot;           
-## [13] &quot;n&quot;               &quot;n_params&quot;        &quot;nugget&quot;          &quot;nugget_type&quot;    
-## [17] &quot;predict&quot;         &quot;priors&quot;          &quot;targets&quot;         &quot;theta&quot;</code></pre>
+<pre><code>##  [1] &quot;current_logpost&quot; &quot;D&quot;               &quot;fit&quot;            
+##  [4] &quot;get_K_matrix&quot;    &quot;inputs&quot;          &quot;invQt&quot;          
+##  [7] &quot;kernel&quot;          &quot;L&quot;               &quot;logpost_deriv&quot;  
+## [10] &quot;logpost_hessian&quot; &quot;logposterior&quot;    &quot;mean&quot;           
+## [13] &quot;n&quot;               &quot;n_params&quot;        &quot;nugget&quot;         
+## [16] &quot;nugget_type&quot;     &quot;predict&quot;         &quot;priors&quot;         
+## [19] &quot;targets&quot;         &quot;theta&quot;</code></pre>
 </div>
 <div id="predictions-1" class="section level3">
 <h3>Predictions</h3>
@@ -574,9 +578,9 @@ y2_actual &lt;- sin(x1_test) + exp(x2_test)*2
 y_predict &lt;- gp_multi$predict(x_test)</code></pre>
 <p>We proceed to compute RMSE for the first emulator and second emulator</p>
 <pre class="r"><code>print(sqrt(sum((y1_actual - y_predict$mean[1, ])**2)/n_test))</code></pre>
-<pre><code>## [1] 0.0373427</code></pre>
+<pre><code>## [1] 0.05354961</code></pre>
 <pre class="r"><code>print(sqrt(sum((y2_actual - y_predict$mean[2, ])**2)/n_test))</code></pre>
-<pre><code>## [1] 0.300974</code></pre>
+<pre><code>## [1] 0.7156839</code></pre>
 </div>
 </div>
 
