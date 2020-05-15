@@ -1,0 +1,63 @@
+---
+title: "Saving ExeterUQ_mogp emualtors"
+author: "Danny Williamson"
+date: "15/05/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Saving and loading
+
+```ExeterUQ_mogp``` emulators are not standard objects. They are lists with 2 elements: the first of which is a python mogp_emulator object, and the second is a list of statistical elements of the fit such as prior choices, mean function choices, elements useful for diagnostics and other things we would like for transparent inference.
+
+The usual ```save()``` and ```load()``` functions will seem to work, but will only save a pointer for the python object (which once removed/reloaded won't work). Here is a MWE
+
+```{r}
+mogp_dir <- "~/Dropbox/BayesExeter/mogp_emulator"
+```
+
+```{r results='hide', message=FALSE, warning=FALSE}
+setwd('..')
+source('BuildEmulator/BuildEmulator.R')
+```
+
+```{r}
+load("ConvectionModelExample.Rdata")
+TestEm <- BuildNewEmulators(tData, HowManyEmulators = 2)
+print(TestEm[[1]])
+save(TestEm, file="TestEm.RData")
+rm(TestEm)
+load("TestEm.RData")
+print(TestEm[[1]])
+```
+
+The mogp part has gone on reload (it was never saved). To overcome this we use the python functions ```py_save_object``` and ```py_load_object``` to save out the mogp part. This means that our saving and loading of an mogp emulator actually saves an RData file and a python object separately. This is all handled automatically within our package using the functions ```saveExUQmogp``` and ```loadExUQmogp``` 
+First we build an emulator again
+```{r}
+TestEm <- BuildNewEmulators(tData, HowManyEmulators = 2)
+```
+
+Now to save we call
+```{r}
+save_ExUQmogp(TestEm, filename = "SavedEmulator")
+```
+
+It is important that the filename here has no extensions. Within your directory, this function has now saved 2 files: ```SavedEmulator.RData``` is the Rlist and ```SavedEmulator_mogp``` is the Python object. 
+
+To load an emulator, both the R and Python objects have to exist in the directory (so you would be loading an emulator that was saved using ```save_ExUQmogp```). Removing ```TestEm``` to check the call we have
+
+```{r}
+rm(TestEm)
+TestEm <- load_ExUQmogp("SavedEmulator")
+```
+
+Checking successful loading:
+
+```{r}
+newDesign <- 2*randomLHS(100,3)-1
+preds <- TestEm$mogp$predict(newDesign, deriv=FALSE)
+preds$mean
+```
