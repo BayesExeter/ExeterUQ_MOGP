@@ -143,7 +143,7 @@ GetKernel <- function(kernel.type = "Gaussian") {
 # lm.tryFouriers is a Boolean that indicates whether our automatic linear model fitting code should explore fourier terms.
 # lm.maxOrder specifies what degree of polynomials can be fitted in our automatic linear models code. 
 # lm.maxdf specifies how many degrees of freedom should be spent on fitting a linear model. The default is ~10% and is used if set to NULL
-choices.default <- list(DeltaActiveMean = 0, DeltaActiveSigma = 0.5,
+choices.default <- list(DeltaActiveMean = 0, DeltaActiveSigma = 0.125,
                         DeltaInactiveMean=5, DeltaInactiveSigma=0.005,
                         BetaRegressMean = 0, BetaRegressSigma = 10,
                         NuggetProportion=0.1, Nugget = "fit", 
@@ -302,6 +302,31 @@ BuildNewEmulators <- function(tData, HowManyEmulators,
   
   return(list(mogp = Emulators, # call mogp
               fitting.elements= fitting))
+}
+
+save_ExUQmogp <- function(ExUQmogp, filename){
+  #'@param ExUQmogp An ExeterUQ_mogp object. This is a list with 2 elements: $mogp (an mogp object) and $fitting.elements (various objects used in the fitting and useful for prediction.)
+  #'@param filename This is a string without an extension. Do not use extensions such as .RData
+  #'@description the mogp part of the ExUQmogp is a python object, but ExUQmogp is an Rlist. This code saves the mogp in 2 parts: An RData file with name "filename.RData" and a python object with name "filename_mogp". These 2 files are then recombined with load_ExUQmogp(filename).
+  if(!all(names(ExUQmogp) == c("mogp", "fitting.elements")))
+    stop("Object to save must be an Exeter UQ mogp object: a list with 2 elements: the mogp and the fitting elements.")
+  save(ExUQmogp, file = paste(filename,"RData",sep="."))
+  py_save_object(ExUQmogp$mogp, paste(filename,"mogp",sep="_"))
+}
+
+load_ExUQmogp <- function(filename){
+  #'@param filename Ensure that the directory from which you are loading the mogp has the 2 files "filename.RData" and "filename_mogp".
+  #'@description Returns an ExUQmogp object: an R list with elements $mogp and $fitting.elements. The 2 elements must be loaded from 2 different files in this version of the code. These files will have been created with a call to save_ExUQmogp()
+  ExUQmogpObj <- try(load(paste(filename,"RData",sep=".")),silent=TRUE)
+  if(inherits(ExUQmogpObj,"try-error"))
+    stop(paste("The file ", filename, ".RData does not exist. Ensure you specify filename so that both filename.RData and filename_mogp exist."))
+  ExUQmogpObj <- eval(parse(text=ExUQmogpObj))
+  if(!all(names(ExUQmogpObj) == c("mogp", "fitting.elements")))
+    stop("Loaded object must be an Exeter UQ mogp object: a list with 2 elements: the mogp and the fitting elements.")
+  ExUQmogpObj$mogp <- try(py_load_object(paste(filename,"mogp",sep="_")),silent=TRUE)
+  if(inherits(ExUQmogpObj$mogp, "try-error"))
+    stop(paste("The file ", filename, "_mogp does not exist. Ensure you specify filename so that both filename.RData and filename_mogp exist."))
+  return(ExUQmogpObj)
 }
 
 virtual.LOO_MOGP <- function(mogp.emulator, lm.emulator) {
