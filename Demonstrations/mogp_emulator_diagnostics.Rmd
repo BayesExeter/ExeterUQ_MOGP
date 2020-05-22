@@ -41,7 +41,7 @@ tData.valid <- tData[26:30, ]
 We proceed to construct a GP emulator with default settings for all three model outputs.
 
 ```{r results='hide', message=FALSE, warning=FALSE}
-TestEm <- BuildNewEmulators(tData = tData.train, HowManyEmulators = 3)
+TestEm <- BuildNewEmulators(tData = tData.train, HowManyEmulators = 3, meanFun="fitted")
 ```
 
 ### Leave-One-Out (LOO) diagnostics

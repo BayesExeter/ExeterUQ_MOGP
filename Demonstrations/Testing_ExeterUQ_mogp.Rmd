@@ -47,9 +47,9 @@ To engage with our code with your own data, simply create this "Noise" vector wi
 tData <- cbind(inputs, Noise, outputs)
 ```
 ### Building mogp emulators
-The call to build a default mogp emulator is below. It will build our custom mogp emulator for all 3 outputs simultaneously, using all of our default specifications for kernels, means etc. The visable output represents the fitting of our custom mean functions to each output. For those experienced statisiticians you can get an idea of what the key features of the data are from looking at this output.
+The call to build an mogp emulator is below. It will build our custom mogp emulator for all 3 outputs simultaneously, using all of our default specifications for kernels, means etc. The visable output represents the fitting of our custom mean functions to each output. For those experienced statisiticians you can get an idea of what the key features of the data are from looking at this output. Note the new version defaults to a linear mean in the parameters, but we reccommend a fitted mean.
 ```{r}
-TestEm <- BuildNewEmulators(tData, HowManyEmulators = 3) 
+TestEm <- BuildNewEmulators(tData, HowManyEmulators = 3, meanFun="fitted") 
 ```
  The models here are accessible as part of the output of BuildNewEmulators.
 ```{r}

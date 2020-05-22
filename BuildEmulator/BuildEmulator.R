@@ -219,7 +219,7 @@ EMULATE.lm <- function(Response, tData, dString="tData",maxdf=NULL,tcands=cands,
 BuildNewEmulators <- function(tData, HowManyEmulators, 
                               additionalVariables=NULL, 
                               Choices = lapply(1:HowManyEmulators,
-                                               function(k) choices.default), meanFun = "fitted", 
+                                               function(k) choices.default), meanFun = "linear", 
                               kernel = c("Gaussian"),...){
   #'@description Builds MO_GP emulators for a data frame 
   #'@param tData This is the data frame you wish to use. The format should be D+1+Q where Q is the number of targets each occupying one of the last Q columns, D is the number of inputs occupying the first D columns. The D+1th column should be a vector of random normal numbers (between -1 and 1) called "Noise". We use it in our LM code to stop our algorithms overfitting by selecting signals by chance. All variables should have names.
