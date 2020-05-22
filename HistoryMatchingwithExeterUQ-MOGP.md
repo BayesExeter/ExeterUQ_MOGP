@@ -372,7 +372,8 @@ sample_size <- 1000000
 nparam <- length(names(TestEm$fitting.elements$Design))
 Xp <- as.data.frame(2*randomLHS(sample_size, nparam)-1)
 names(Xp) <- names(TestEm$fitting.elements$Design)
-system.time(Timps <- ImplausibilityMOGP(NewData=Xp, Emulator=TestEm, Discrepancy=tDisc, Obs=tObs, ObsErr=tObsErr))
+system.time(Timps <- ImplausibilityMOGP(NewData=Xp, Emulator=TestEm, Discrepancy=tDisc, 
+                Obs=tObs, ObsErr=tObsErr))
 ```
 
     ##    user  system elapsed 
@@ -401,7 +402,8 @@ The sampled implausibilities are then used to find NROY space and to
 create matrices for plotting 2D projections of parameter space.
 
 ``` r
-ImpListM1 = CreateImpList(whichVars = 1:nparam, VarNames=VarNames, ImpData=ImpData_wave1, nEms=TestEm$mogp$n_emulators, whichMax=valmax+1)
+ImpListM1 = CreateImpList(whichVars = 1:nparam, VarNames=VarNames, ImpData=ImpData_wave1, 
+                            nEms=TestEm$mogp$n_emulators, whichMax=valmax+1)
 NROY1 <- which(rowSums(Timps <= cutoff_vec[1]) >= TestEm$mogp$n_emulators -valmax)
 length(NROY1)/dim(Xp)[1]
 ```
@@ -411,7 +413,10 @@ length(NROY1)/dim(Xp)[1]
 NROY density plots
 
 ``` r
-imp.layoutm11(ImpListM1,VarNames,VariableDensity=FALSE,newPDF=FALSE,the.title=paste("InputSpace_wave",WAVEN,".pdf",sep=""),newPNG=FALSE,newJPEG=FALSE,newEPS=FALSE,Points=matrix(param.defaults.norm,ncol=nparam))
+imp.layoutm11(ImpListM1, VarNames, VariableDensity=FALSE, newPDF=FALSE, 
+                the.title=paste("InputSpace_wave",WAVEN,".pdf",sep=""), 
+                newPNG=FALSE, newJPEG=FALSE, newEPS=FALSE, 
+                Points=matrix(param.defaults.norm,ncol=nparam))
 mtext(paste("Remaining space:",length(NROY1)/dim(Xp)[1],sep=""), side=1)
 ```
 
