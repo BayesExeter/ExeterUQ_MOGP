@@ -251,7 +251,9 @@ lastCand <- which(names(tData)=="Noise")
 HowManyEmulators <- length(names(tData)) - lastCand
 tData <- tData[,c(1:lastCand,(lastCand+1):(lastCand+HowManyEmulators))]
 linPredictor <- paste(names(tData)[1:(lastCand-1)],collapse="+")
-lm.list = lapply(1:HowManyEmulators, function(k) list(linModel=eval(parse(text=paste("lm(", paste(names(tData[lastCand+k]), linPredictor, sep="~"), ", data=tData)", sep="")))))
+lm.list = lapply(1:HowManyEmulators, function(k) list(linModel =
+    eval(parse(text = paste("lm(", paste(names(tData[lastCand+k]), 
+    linPredictor, sep="~"), ", data=tData)",  sep="")))))
 ActiveVariableIndices <- lapply(lm.list, function(tlm) names(tData)[1:(lastCand-1)])
 summary(lm.list[[1]]$linModel)
 ```
@@ -291,7 +293,9 @@ ActiveVariables <- ActiveVariableIndices[[1]]
 
 ``` r
 p <- length(lm.emulator$linModel$coefficients)-1
-Betas <- lapply(1:p, function(e) mogp_priors$NormalPrior(Choices$BetaRegressMean, Choices$BetaRegressSigma))
+Betas <- lapply(1:p, function(e) 
+                mogp_priors$NormalPrior(Choices$BetaRegressMean,
+                Choices$BetaRegressSigma))
 ```
 
 The above sets a *N*(`BetaRegressMean`, `BetaRegressSigma`) prior for
@@ -299,7 +303,9 @@ each of the regression coefficients but leaves the intercept as uniorm.
 Our default choices are for *N*(0, 10<sup>2</sup>)
 
 ``` r
-hist(rnorm(10000,Choices$BetaRegressMean,Choices$BetaRegressSigma),breaks=100,main=expression(paste("Samples from the regression coefficient prior for ", beta,sep=" ")),xlab=expression(beta))
+hist(rnorm(10000,Choices$BetaRegressMean,Choices$BetaRegressSigma), breaks=100, 
+      main=expression(paste("Samples from the regression coefficient prior for ", 
+      beta,sep=" ")),xlab=expression(beta))
 ```
 
 ![](Subjective-Prior-distributions_files/figure-markdown_github/unnamed-chunk-12-1.png)
@@ -393,7 +399,9 @@ probability of exceeding the bound.
 ``` r
   alphaSig <- SigmaParams$alpha
   betaSig <- SigmaParams$beta
-  hist(rinvgamma(10000,alphaSig,betaSig),breaks=100, main = expression(paste("Samples from the prior for ", sigma^2,sep=" ")),xlab=expression(sigma^2))
+  hist(rinvgamma(10000,alphaSig,betaSig),breaks=100, 
+      main = expression(paste("Samples from the prior for ", sigma^2,sep=" ")),
+      xlab=expression(sigma^2))
   abline(v=ModeSig)
   abline(v=(1-Choices$NuggetProportion)*boundSig,col=2)
 ```
@@ -468,18 +476,24 @@ inactive!
 
 ``` r
 par(mfrow=c(1,2))
-hist(rlnorm(10000,Choices$DeltaActiveMean,sqrt(Choices$DeltaActiveSigma)),breaks=100, main="Active Lognormal Samples",xlab="Active Input")
-hist(rlnorm(10000,Choices$DeltaInactiveMean,sqrt(Choices$DeltaInactiveSigma)),breaks=100, main="Inactive Lognormal Samples",xlab="Inactive Input")
+hist(rlnorm(10000,Choices$DeltaActiveMean,sqrt(Choices$DeltaActiveSigma)), breaks=100, 
+      main="Active Lognormal Samples",xlab="Active Input")
+hist(rlnorm(10000, Choices$DeltaInactiveMean,sqrt(Choices$DeltaInactiveSigma)), breaks=100, 
+      main="Inactive Lognormal Samples",xlab="Inactive Input")
 ```
 
 ![](Subjective-Prior-distributions_files/figure-markdown_github/unnamed-chunk-17-1.png)
 
 ``` r
 par(mfrow=c(2,2))
-hist(exp(-1/rlnorm(10000,Choices$DeltaActiveMean,sqrt(Choices$DeltaActiveSigma))^2),breaks=100, main="Half Length Correlation", xlab="Active Input Prior")
-hist(exp(-1/rlnorm(10000,Choices$DeltaInactiveMean,sqrt(Choices$DeltaInactiveSigma))^2),breaks=100, main="Half Length Correlation", xlab="Inactive Input Prior")
-hist(exp(-.5/rlnorm(10000,Choices$DeltaActiveMean,sqrt(Choices$DeltaActiveSigma))^2),breaks=100, main="Quarter Length Correlation", xlab="Active Input Prior")
-hist(exp(-.5/rlnorm(10000,Choices$DeltaInactiveMean,sqrt(Choices$DeltaInactiveSigma))^2),breaks=100, main="Quarter Length Correlation", xlab="Inactive Input Prior")
+hist(exp(-1/rlnorm(10000, Choices$DeltaActiveMean,sqrt(Choices$DeltaActiveSigma))^2), breaks=100,
+    main="Half Length Correlation", xlab="Active Input Prior")
+hist(exp(-1/rlnorm(10000, Choices$DeltaInactiveMean, sqrt(Choices$DeltaInactiveSigma))^2), breaks=100, 
+    main="Half Length Correlation", xlab="Inactive Input Prior")
+hist(exp(-.5/rlnorm(10000, Choices$DeltaActiveMean, sqrt(Choices$DeltaActiveSigma))^2),breaks=100, 
+    main="Quarter Length Correlation", xlab="Active Input Prior")
+hist(exp(-.5/rlnorm(10000, Choices$DeltaInactiveMean, sqrt(Choices$DeltaInactiveSigma))^2),breaks=100, 
+    main="Quarter Length Correlation", xlab="Inactive Input Prior")
 ```
 
 ![](Subjective-Prior-distributions_files/figure-markdown_github/unnamed-chunk-18-1.png)
