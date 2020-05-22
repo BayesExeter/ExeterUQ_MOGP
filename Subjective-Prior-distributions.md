@@ -7,7 +7,7 @@ simultaneously and in an intuitive way. However, you are able to do this
 directly with mogp, so why use our package at all?
 
 The reason is that, absent specific knowledge about the output(s) you
-are emulating, most users just want default choices that fit will, with
+are emulating, most users just want default choices that fit well, with
 perhaps a little flexibility (say to indicate that one parameter really
 should be active and another shouldn’t). The most common approach is to
 fit the hyperparameters by maximum likelihood. This is the approach of
@@ -21,15 +21,15 @@ There are 2 potential issues. The first is the confounding between
 a regression line close to the least squares estimate, a low
 *σ*<sup>2</sup> and a moderate correlation is the solution you would
 like, but if *σ*<sup>2</sup> is made large and the correlation made
-large (so small correlation lengths *δ*), good interpolators (on the
-ridge of the likelihood surface) are found whatever line is fit. You can
-often see this when fitting constant mean functions, when the fit has a
-mean parameter that is a long way from the data. The second is that,
-whatever the model you are trying to emulate, it is normally the case
-that a weakly stationary Gaussian process is not “generative”, and so
-the “best” fits to the data (in terms of the likelihood function) are
-those with a large variance (often in the nugget) and with large
-correlation. An example of the motivating problem is given below.
+large, good interpolators (on the ridge of the likelihood surface) are
+found whatever line is fit. You can often see this when fitting constant
+mean functions, when the fit has a mean parameter that is a long way
+from the data. The second is that, whatever the model you are trying to
+emulate, it is normally the case that a weakly stationary Gaussian
+process is not “generative”, and so the “best” fits to the data (in
+terms of the likelihood function) are those with a large variance (often
+in the nugget) and with low correlation. An example of the motivating
+problem is given below.
 
 ### Preliminaries
 
@@ -70,7 +70,8 @@ Now build an emulator with a linear mean function and some weakly
 informative priors to ensure we get a good fit (this should create the
 type of emulator we want automatically and we spend most of this
 vignette discussing these prior choices). The nugget is fit adaptively
-so is set to be as small as possible to get the numerics to work.
+inside `mogp_emulator` so is set to be as small as possible to get the
+numerics to work.
 
 ``` r
 target_list <- extract_targets(x, target_cols = c("y1"))
@@ -101,7 +102,7 @@ points(xpreds, tpreds$mean - 2*(sqrt(tpreds$unc)),col=4,type="l",lty=2)
 p$theta
 ```
 
-    ## [1] -0.37761915 -0.39385297  0.02827789 -0.97248792  1.13841394
+    ## [1] -0.37761909 -0.39385298  0.02827789 -0.97248789 -0.22036307
 
 The blue lines are the mean function and prediction intervals. We can
 look at what has been fit here:
@@ -144,7 +145,7 @@ points(xpreds, tpreds1$mean - 2*(sqrt(tpreds1$unc)),col=2,type="l",lty=2)
 p1$theta
 ```
 
-    ## [1]  0.3373248 -0.7418148  4.6222918 -2.6284615  0.4885823
+    ## [1]  0.3373245 -0.7418168  4.6400067 -2.6284617  0.8365486
 
 The red lines are the mean and prediction intervals for the maximum
 likelihood emulator. Similarly here is what has been fit.
