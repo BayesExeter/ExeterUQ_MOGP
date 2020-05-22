@@ -427,7 +427,7 @@ dim(tvar)
 
     ## [1]     3 10000
 
-with the same dimensions as the mean. There are no customisation in this
+with the same dimensions as the mean. There is no customisation in this
 repository for prediction. I.e. you can engage with TestEm$mogp as with
 any mogp object.
 
@@ -475,7 +475,9 @@ Many prefer not to have custom mean functions, but to use linear means.
 The option `meanFun` in `BuildNewEmulators` allows this as follows
 
 ``` r
-TestEmLinear <- BuildNewEmulators(tData, 3,additionalVariables = names(tData)[1:3], meanFun = "linear")
+TestEmLinear <- BuildNewEmulators(tData, 3, 
+                                additionalVariables = names(tData)[1:3], 
+                                meanFun = "linear")
 ```
 
 The default option is `meanFun="fitted"` which engages our customised
