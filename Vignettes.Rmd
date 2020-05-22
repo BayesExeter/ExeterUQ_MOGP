@@ -1,0 +1,18 @@
+---
+title: "Vignettes"
+author: "Danny Williamson"
+date: "22/05/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+---
+layout: default
+---
+
+# Using ExeterUQ_MOGP
+
+- [Running mopg_emulator by hand in R](/Vignettes/mogp_emulator_demo)
