@@ -476,8 +476,8 @@ The option `meanFun` in `BuildNewEmulators` allows this as follows
 
 ``` r
 TestEmLinear <- BuildNewEmulators(tData, 3, 
-                                additionalVariables = names(tData)[1:3], 
-                                meanFun = "linear")
+                                  additionalVariables = names(tData)[1:3], 
+                                  meanFun = "linear")
 ```
 
 The default option is `meanFun="fitted"` which engages our customised
@@ -581,7 +581,8 @@ choices.new$lm.maxdf = 4
 Changed choices are then inputted as
 
 ``` r
-newTest <- BuildNewEmulators(tData, HowManyEmulators = 3, Choices = choices.new) 
+newTest <- BuildNewEmulators(tData, HowManyEmulators = 3, 
+                             Choices = choices.new) 
 ```
 
 #### Different Kernels
@@ -595,7 +596,9 @@ own mogp installation could be supported in the future.
 To specify the kernel for each emulator an example call is
 
 ``` r
-newTest <- BuildNewEmulators(tData, HowManyEmulators = 3, kernel = c("Gaussian", "Gaussian", "Matern52")) 
+newTest <- BuildNewEmulators(tData, HowManyEmulators = 3, 
+                            kernel = c("Gaussian", "Gaussian",
+                            "Matern52")) 
 ```
 
 Note that specifying a single name will recycle the named kernel over
@@ -623,5 +626,4 @@ via
 choices.new$BetaRegressSigma = 100
 ```
 
-The code itself documents the other options and what they can be changed
-to.
+For more on priors, see the vignette on subjective priors.
