@@ -7,7 +7,11 @@ Specifically, we are using the implementation that allows for custom prior speci
 
 This repository offers our own custom default subjective prior specification, designed to be as similar as possible to the ExeterUQ code: [https://github.com/BayesExeter/ExeterUQ](https://github.com/BayesExeter/ExeterUQ) that is used by different groups for climate model tuning.
 
-We provide methods for easy customisable emulation, diagnostics and history matching. Work through the demonstrations: first to see how mogp works through the ```mogp_emulator_demo.Rmd```, then build an ExeterUQ_mogp through ```Testing-ExeterUQ-mogp.Rmd```. Learn how diagnostics work with ```mogp_emulator_diagnostics.Rmd``` and see history matching through ```HistoryMatchingwithExeterUQ.Rmd```.
+We provide methods for easy customisable emulation, diagnostics and history matching. The following pages offer a number of tutorials from using mogp_emulator directly (without our interface here), through to emulation and history matching at scale with our implementation. The Rmarkdown files for the tutorials are available in the demonstrations folder so that you can run the code for yourself.  
 
-Go to [Vignettes](Vignettes)
+Note, this website is designed to be viewed from [https://bayesexeter.github.io/ExeterUQ_MOGP/](https://bayesexeter.github.io/ExeterUQ_MOGP/)
+
+Work through the demonstrations: first to see how mogp works through the ```mogp_emulator_demo.Rmd```, then build an ExeterUQ_mogp through ```Testing-ExeterUQ-mogp.Rmd```. Learn how diagnostics work with ```mogp_emulator_diagnostics.Rmd``` and see history matching through ```HistoryMatchingwithExeterUQ.Rmd```.
+
 - [Running mopg\_emulator by hand in R](mogp_emulator_demo)
+- [Easy Fitting of Emulators with ExeterUQ_mogp](Testing_ExeterUQ_mogp.md)
