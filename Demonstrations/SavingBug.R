@@ -22,7 +22,7 @@ TestEm$mogp <- py_load_object("TestEm_mogp")
 newDesign <- 2*randomLHS(100,3)-1
 preds <- TestEm$mogp$predict(newDesign, deriv=FALSE)
 
-####FIXED: New saving functions in BuildEmulator.R
+####FIXED: New saving functions in BuildEmulator.R See implementation below####
 
 
 TestEm <- BuildNewEmulators(tData, HowManyEmulators = 2)

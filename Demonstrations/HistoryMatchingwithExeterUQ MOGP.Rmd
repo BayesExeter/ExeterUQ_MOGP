@@ -31,7 +31,7 @@ head(tData)
 
 Build an emulator.
 ```{r}
-TestEm <- BuildNewEmulators(tData, HowManyEmulators = 3) 
+TestEm <- BuildNewEmulators(tData, HowManyEmulators = 3, meanFun = "fitted") 
 ```
 
 ### History matching example
