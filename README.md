@@ -10,3 +10,4 @@ This repository offers our own custom default subjective prior specification, de
 We provide methods for easy customisable emulation, diagnostics and history matching. Work through the demonstrations: first to see how mogp works through the ```mogp_emulator_demo.Rmd```, then build an ExeterUQ_mogp through ```Testing-ExeterUQ-mogp.Rmd```. Learn how diagnostics work with ```mogp_emulator_diagnostics.Rmd``` and see history matching through ```HistoryMatchingwithExeterUQ.Rmd```.
 
 Go to [Vignettes](Vignettes)
+- [Running mopg\_emulator by hand in R](mogp_emulator_demo)
