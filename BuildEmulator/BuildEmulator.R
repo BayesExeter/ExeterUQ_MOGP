@@ -81,7 +81,11 @@ GetPriors <- function(lm.emulator, d, Choices, ActiveVariables){
   #'@description This function constructs a subjective prior for the parameters of a GP emulator to be fit by MO_GP. 
   #'@param lm.emulator A lm emulator list (see AutoLMCode). The only required element of this list is the linModel component. lm.emulator$linModel is an lm object fitted to the target data. Custom lm objects can be specified using lm.emulator = list(linModel=lm(...), entering your own formulae). It is suggested that this is done elsewhere and passed here.
   #'@param d the number of input parameters
-  #'@param Choices A list containing hyperprior choices that control the subjective prior. 
+  #'@param Choices A list containing hyperprior choices that control the subjective prior.
+  #'@param NonInformativeRegression If TRUE, a uniform prior is used for the regression parameters.
+  #'@param NonInformativeCorrelationLengths If TRUE, a uniform prior is used for the correlation parameters. 
+  #'@param NonInformativeSigma If TRUE, a uniform prior is used for the sigma parameter.
+  #'@param NonInformativeNugget If TRUE, a uniform prior is used for the regression parameters.
   #'@param BetaRegressMean Prior mean for the regression coefficients. The intercept is given a uniform prior, all other regression terms get a Normal prior with mean BetaRegressMean and variance "BetaRegressSigma"
   #'@param BetaRegressSigma Prior variance for the regression coefficients.
   #'@param DeltaActiveMean The mean of a lognormal prior for the active inputs (see details). 
@@ -101,27 +105,35 @@ GetPriors <- function(lm.emulator, d, Choices, ActiveVariables){
   if(!is.null(Choices$intercept))
     print("NULL intercept fitted by default: change code")
   #Regression priors
-  Betas <- lapply(1:p, function(e) mogp_priors$NormalPrior(Choices$BetaRegressMean, Choices$BetaRegressSigma))
-  for(i in 2:(p+1)){#the first element is NULL for the intercept term
+  if(!(Choices$NonInformativeRegression)){
+    Betas <- lapply(1:p, function(e) mogp_priors$NormalPrior(Choices$BetaRegressMean, Choices$BetaRegressSigma))
+    for(i in 2:(p+1)){#the first element is NULL for the intercept term
     Priors[[i]] <- Betas[[i-1]]
+    }
   }
   #Correlation length priors
-  Deltas <- lapply(1:d, function(k) {if(k %in% ActiveVariables) 
-    {mogp_priors$NormalPrior(Choices$DeltaActiveMean,Choices$DeltaActiveSigma)} 
-    else {mogp_priors$NormalPrior(Choices$DeltaInactiveMean,Choices$DeltaInactiveSigma)}})
-  for(j in (p+2):(p+1+d)){
-    Priors[[j]] <- Deltas[[j-p-1]]
+  if(!(Choices$NonInformativeCorrelationLengths)){
+    Deltas <- lapply(1:d, function(k) {if(k %in% ActiveVariables) 
+      {mogp_priors$NormalPrior(Choices$DeltaActiveMean,Choices$DeltaActiveSigma)} 
+      else {mogp_priors$NormalPrior(Choices$DeltaInactiveMean,Choices$DeltaInactiveSigma)}})
+    for(j in (p+2):(p+1+d)){
+      Priors[[j]] <- Deltas[[j-p-1]]
+    }
   }
   #Sigma and nugget priors
   ModeSig <- var(lm.emulator$linModel$residuals)
   boundSig <- ModeSig/(1-summary(lm.emulator$linModel)$r.squared)
-  SigmaParams <- invgamMode((1-Choices$NuggetProportion)*boundSig,ModeSig)
-  Sigma <- mogp_priors$InvGammaPrior(SigmaParams$alpha,SigmaParams$beta)
-  Priors[[d+p+2]] <- Sigma
+  if(!(Choices$NonInformativeSigma)){
+    SigmaParams <- invgamMode((1-Choices$NuggetProportion)*boundSig,ModeSig)
+    Sigma <- mogp_priors$InvGammaPrior(SigmaParams$alpha,SigmaParams$beta)
+    Priors[[d+p+2]] <- Sigma
+  }
   if(Choices$Nugget=="fit"){
-    NuggetParams <- invgamMode(Choices$NuggetProportion*boundSig ,Choices$NuggetProportion*ModeSig)
-    Nugget <- mogp_priors$InvGammaPrior(NuggetParams$alpha, NuggetParams$beta)
-    Priors[[d+p+3]] <- Nugget
+    if(!Choices$NonInformativeNugget){
+      NuggetParams <- invgamMode(Choices$NuggetProportion*boundSig ,Choices$NuggetProportion*ModeSig)
+      Nugget <- mogp_priors$InvGammaPrior(NuggetParams$alpha, NuggetParams$beta)
+      Priors[[d+p+3]] <- Nugget
+    }
   }
     return(Priors)
 }
@@ -143,7 +155,11 @@ GetKernel <- function(kernel.type = "Gaussian") {
 # lm.tryFouriers is a Boolean that indicates whether our automatic linear model fitting code should explore fourier terms.
 # lm.maxOrder specifies what degree of polynomials can be fitted in our automatic linear models code. 
 # lm.maxdf specifies how many degrees of freedom should be spent on fitting a linear model. The default is ~10% and is used if set to NULL
-choices.default <- list(DeltaActiveMean = 0, DeltaActiveSigma = 0.125,
+choices.default <- list(NonInformativeRegression=FALSE, 
+                        NonInformativeCorrelationLengths = FALSE,
+                        NonInformativeSigma = FALSE,
+                        NonInformativeNugget = FALSE,
+                        DeltaActiveMean = 0, DeltaActiveSigma = 0.125,
                         DeltaInactiveMean=5, DeltaInactiveSigma=0.005,
                         BetaRegressMean = 0, BetaRegressSigma = 10,
                         NuggetProportion=0.1, Nugget = "fit", 
