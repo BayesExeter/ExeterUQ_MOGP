@@ -310,7 +310,7 @@ BuildNewEmulators <- function(tData, HowManyEmulators,
   Emulators <- mogp_emulator$fit_GP_MAP(Emulators)
   
   ###Prepare return objects###
-  Design <- tData[,1:(lastCand-1)]
+  Design <- tData[,1:(lastCand-1), drop = FALSE]
   fitting <- list(lm.object = lm.list,
                   Design = Design, 
                   ActiveIndices = ActiveVariableIndices,
@@ -557,7 +557,7 @@ LOO.plot <- function(Emulators, which.emulator=1, ParamNames,
   if(ObsRange){
     fit.loo <- rbind(fit.loo, c(Obs, Obs-2*ObsErr,Obs+2*ObsErr))
   }
-  Design <- Emulators$fitting.elements$Design[,Emulators$fitting.elements$ActiveIndices[[which.emulator]]]
+  Design <- Emulators$fitting.elements$Design[,Emulators$fitting.elements$ActiveIndices[[which.emulator]], drop = FALSE]
   p <- length(ParamNames)
   if(p<2){
     par(mfrow = c(1, 1), mar=c(4, 4, 1, 1))
