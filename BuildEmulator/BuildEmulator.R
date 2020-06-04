@@ -57,9 +57,32 @@ alphaFun <- function(x,M,V){
   #'@description A polynomial in the shape of an inverse gamma distribution with coefficients depending on the mode M and Variance V the roots of which are needed to compute the shape.
   #'@param x the shape of the inverse gamma (to be rooted via Newton Raphson)
   #'@param M the mode of the inverse gamma distribution
-  #'@param the variance of the inverse gamma distribution.
+  #'@param V the variance of the inverse gamma distribution.
   V*x^3 - (4*V+M^2)*x^2 + (5*V-2*M^2)*x - (2*V+M^2)
 }
+
+alphaFun2 <- function(M, V){
+  #'@param M the mode of the inverse gamma distribution
+  #'@param V the variance of the inverse gamma distribution
+  #'@description finding the real root > 2 that will be the shape of our inverse gamma prior. 
+  #'@detail polyroot() finds the complex roots. Either there are 3 real roots (we choose the highest >2 so that a variance exists) or 1 real and 2 complex conjugate roots. In the latter case the real root will still have a tiny numerically 0 imaginary part, and we look to isolate this first.
+  troots <- polyroot(c(-(2*V+M^2),5*V-2*M^2,-(4*V+M^2),V))
+  treal <- which(round(Im(troots), digits=6) ==0)
+  if(length(treal)>1){
+    troots <- troots[treal]
+    return(troots[which(Re(troots)>2)[1]])
+  }
+  else if(length(treal)<1)
+    stop("No real roots for the shape parameter, check roots and consider rounding by fewer digits")
+  else{
+    myroot <- Re(troots[treal])
+    if(!(myroot>2))
+      stop("Only real root for shape equation is < 2 and prior has no variance")
+    else
+      return(myroot)
+  }
+}
+
 invgamMode <- function(bound, tmode){
   #'@description Finds the shape and rate of an inverse gamma distribution given it's mode and a bound on the uncertainty.
   #'@param bound The largest value you want. The variance of the inverse gamma is set so that crossing this bound is a 6 standard deviation event
@@ -68,7 +91,11 @@ invgamMode <- function(bound, tmode){
   #'@return A list with the alpha and beta parameters
   nstd <- bound-tmode
   varSig <- (nstd/6)^2 #6 can be changed to make bound crossing more or less likely.
-  alphaSig <- newtonRaphson(alphaFun, x0=tmode, M=tmode, V=varSig,maxiter=1000)$root
+  ###
+  #New part finding alpha using polyroot
+  #alphaSig <- newtonRaphson(alphaFun, x0=tmode, M=tmode, V=varSig,maxiter=1000)$root
+  alphaSig <- alphaFun2(M=tmode,V=varSig)
+  ###
   betaSig <- tmode*(alphaSig+1)
   #Uncomment the below 3 lines to see the distribution and the probability of exceeding the bound.
   #hist(rinvgamma(10000,alphaSig,betaSig),breaks=100)
