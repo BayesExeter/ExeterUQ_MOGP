@@ -334,7 +334,7 @@ BuildNewEmulators <- function(tData, HowManyEmulators,
                                            priors = Priors, inputdict = inputdict,
                                            nugget = lapply(Choices,function(e) e$Nugget), 
                                            kernel = Kernels)
-  Emulators <- mogp_emulator$fit_GP_MAP(Emulators)
+  Emulators <- mogp_emulator$fit_GP_MAP(Emulators, n_tries=1, ftol=1e-06)
   
   ###Prepare return objects###
   Design <- tData[,1:(lastCand-1), drop = FALSE]
