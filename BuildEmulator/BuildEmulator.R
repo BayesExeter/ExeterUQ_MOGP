@@ -630,7 +630,7 @@ LOO.plot <- function(Emulators, which.emulator=1, ParamNames,
         #Design order is a permutation with cut columns
         if(is.list(DesignOrder))
           DesignOrder <- unlist(DesignOrder)
-        PermutedDesign <- Design[,DesignOrder]
+        PermutedDesign <- Design[,DesignOrder, drop=FALSE]
         AllLogs <- rep(FALSE,length(param.names))
         AllLogs[which.logs] <- TRUE
         toInc <- which(names(PlotOrder)%in%colnames(PermutedDesign))
