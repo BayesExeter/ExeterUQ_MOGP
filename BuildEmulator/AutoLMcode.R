@@ -127,9 +127,11 @@ RemoveTerm <- function(linModel, Tolerance, Names, mainEffects, Interactions, Fa
 	Irremovable <- TRUE
 	k <- 1
 	while(Irremovable){
-		if(sumsqs[k,1]>=Tolerance){
-			Irremovable <- FALSE
-		return(list(removed=FALSE,mainEffects=mainEffects,Interactions=Interactions,Factors=Factors,FactorInteractions=FactorInteractions,ThreeWayInters=ThreeWayInters))
+		if(!is.null(Tolerance)){
+		  if(sumsqs[k,1]>=Tolerance){
+			  Irremovable <- FALSE
+		  return(list(removed=FALSE,mainEffects=mainEffects,Interactions=Interactions,Factors=Factors,FactorInteractions=FactorInteractions,ThreeWayInters=ThreeWayInters))
+		  }
 		}
 		else{
 		term <- attr(anova(linModel),"row.names")[sumsqs[k,2]]
@@ -275,9 +277,49 @@ RemoveTerm <- function(linModel, Tolerance, Names, mainEffects, Interactions, Fa
 
 	}
 
-#This function removes up to N terms (within the specified tolerance), and returns the final linear model as well as the different matrices in a list.
+#This function removes up to N terms (within the specified tolerance (if specified)), and returns the final linear model as well as the different matrices in a list.
+removeNterms <- function(N, linModel, dataString, responseString, Tolerance=NULL, Names, mainEffects, Interactions, Factors=NULL, FactorInteractions=NULL, ThreeWayInters=NULL,tData, Fouriers=NULL){
+  dontStop <- TRUE
+  j <- 1
+  while(dontStop&(j<=N)){
+    tmpRm <- RemoveTerm(linModel=linModel, Tolerance=Tolerance, Names=Names, mainEffects=mainEffects, Interactions=Interactions, Factors=Factors, FactorInteractions=FactorInteractions, ThreeWayInters=ThreeWayInters, Fouriers = Fouriers)
+    if(!tmpRm$removed){
+      dontStop <- FALSE
+    }
+    else{
+      print(paste(j,tmpRm$what,sep=" "))
+      mainEffects <- tmpRm$mainEffects
+      Interactions <- tmpRm$Interactions
+      Factors <- tmpRm$Factors
+      FactorInteractions <- tmpRm$FactorInteractions
+      ThreeWayInters <- tmpRm$ThreeWayInters
+      if(!is.null(ThreeWayInters)){
+        tsums <- unlist(lapply(ThreeWayInters, function(e) sum(e)))
+        threeoldnames <- names(ThreeWayInters)
+        for(l in which(tsums<1)){
+          ThreeWayInters[[threeoldnames[l]]] <- NULL
+        }
+        if(length(ThreeWayInters) < 1)
+          ThreeWayInters <- NULL
+      }
+      Fouriers <- tmpRm$Fouriers
+      if(!is.null(Fouriers)){
+        tsums <- unlist(lapply(Fouriers, function(e) sum(e)))
+        oldFnames <- names(Fouriers)
+        for(l in which(tsums<1)){
+          Fouriers[[oldFnames[l]]] <- NULL
+        }
+        if(length(Fouriers)<1)
+          Fouriers <- NULL
+      }
+      linModel <- FitLM(dataString, responseString, Names, mainEffects, Interactions, Factors, FactorInteractions, ThreeWayInters,tData,Fouriers=Fouriers)
+      j <- j+1
+    }	
+  }
+  return(list(Names=Names,linModel=linModel,mainEffects=mainEffects,Interactions=Interactions,Factors=Factors,FactorInteractions=FactorInteractions,ThreeWayInters=ThreeWayInters, Fouriers=Fouriers))
+}
 
-removeNterms <- function(N, linModel, dataString, responseString, Tolerance, Names, mainEffects, Interactions, Factors=NULL, FactorInteractions=NULL, ThreeWayInters=NULL,tData, Fouriers=NULL){
+removeNtermsold <- function(N, linModel, dataString, responseString, Tolerance, Names, mainEffects, Interactions, Factors=NULL, FactorInteractions=NULL, ThreeWayInters=NULL,tData, Fouriers=NULL){
 	dontStop <- TRUE
 	j <- 1
 	while(dontStop&(j<=N)){

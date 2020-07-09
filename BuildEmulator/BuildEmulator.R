@@ -104,6 +104,12 @@ invgamMode <- function(bound, tmode){
   list(alpha=alphaSig,beta=betaSig)
 }
 
+GetStarts <- function(lm.emulator, d, Choices){
+  MeanStart <- as.vector(summary(lm.emulator$linModel)$coef[,1])
+  tSig <- summary(lm.emulator$linModel)$sigma
+  c(MeanStart, rep(0,d), (1-Choices$NuggetProportion)*tSig, Choices$NuggetProportion*tSig)
+}
+
 GetPriors <- function(lm.emulator, d, Choices, ActiveVariables){
   #'@description This function constructs a subjective prior for the parameters of a GP emulator to be fit by MO_GP. 
   #'@param lm.emulator A lm emulator list (see AutoLMCode). The only required element of this list is the linModel component. lm.emulator$linModel is an lm object fitted to the target data. Custom lm objects can be specified using lm.emulator = list(linModel=lm(...), entering your own formulae). It is suggested that this is done elsewhere and passed here.
@@ -186,10 +192,10 @@ choices.default <- list(NonInformativeRegression=FALSE,
                         NonInformativeCorrelationLengths = FALSE,
                         NonInformativeSigma = FALSE,
                         NonInformativeNugget = FALSE,
-                        DeltaActiveMean = 0, DeltaActiveSigma = 0.125,
-                        DeltaInactiveMean=5, DeltaInactiveSigma=0.005,
-                        BetaRegressMean = 0, BetaRegressSigma = 10,
-                        NuggetProportion=0.1, Nugget = "fit", 
+                        DeltaActiveMean = -0.25, DeltaActiveSigma = 0.14,
+                        DeltaInactiveMean=-5, DeltaInactiveSigma=0.005,
+                        BetaRegressMean = 0, BetaRegressSigma = 100,
+                        NuggetProportion=0.05, Nugget = "fit", 
                         lm.tryFouriers=FALSE, lm.maxOrder=NULL, 
                         lm.maxdf=NULL)
 
@@ -207,7 +213,6 @@ DegreesFreedomDefault <- function(ChoiceList, N){
   }
   return(t.dfs)
 }
-
 EMULATE.lm <- function(Response, tData, dString="tData",maxdf=NULL,tcands=cands,tcanfacs=canfacs,TryFouriers=FALSE,maxOrder=NULL){
   #' Generate a linear model for Gaussian Process (GP) Emulator
   #' 
@@ -244,7 +249,57 @@ EMULATE.lm <- function(Response, tData, dString="tData",maxdf=NULL,tcands=cands,
       break
   }
   print(summary(added$linModel))
-  if(length(tData[,1])-1-added$linModel$df > maxdf){
+  if(nrow(tData)-1-added$linModel$df > maxdf){
+    NRM <- nrow(tData) - 1 - added$linModel$df.residual - maxdf
+    trm <- removeNterms(N=NRM,linModel=added$linModel,dataString=added$DataString,responseString=added$ResponseString,Tolerance=NULL,Names=added$Names,mainEffects=added$mainEffects,Interactions=added$Interactions,Factors=added$Factors,FactorInteractions=added$FactorInteractions,ThreeWayInters=added$ThreeWayInters,tData=added$tData,Fouriers = added$Fouriers)
+    print(summary(trm$linModel))
+    trm$pre.Lists <- get.predict.mats(trm$linModel)
+    trm$DataString <- dString
+    trm$ResponseString <- Response
+    return(trm)
+  }
+  else{
+    return(added)
+  }
+}
+
+EMULATE.lm.old <- function(Response, tData, dString="tData",maxdf=NULL,tcands=cands,tcanfacs=canfacs,TryFouriers=FALSE,maxOrder=NULL){
+  #' Generate a linear model for Gaussian Process (GP) Emulator
+  #' 
+  #' @param Response a string corresponding to the response variable
+  #' @param tData a data frame containing the inputs and outputs
+  #' @param dString a string corresponding to the name of a data frame
+  #' @param maxdf a maximim number of degrees of freedom that we are expecting to 
+  #' lose by adding terms to the linear model
+  #' @param tcands a vector of parameter names
+  #' @param tcanfacs a vector of parameter names that are factors
+  #' @param TryFouriers a logical argument with default FALSE. TRUE allows
+  #' the Fourier transformation of the parameters
+  #' @param maxOrder maximum order of Fourier terms (Fourier series)
+  #' 
+  #' @return A linear model and the parameters allowing refitting (see AutoLMcode.R)
+  #' 
+  if(is.null(maxdf)){
+    maxdf <- ceiling(length(tData[,1])/10)
+  }
+  startLM <- eval(parse(text=paste("lm(",Response,"~1,data=",dString,")",sep="")))
+  if(maxdf < 2){
+    return(list(linModel=startLM,Names=NULL,mainEffects=NULL,Interactions=NULL,Factors=NULL,FactorInteractions=NULL,ThreeWayInters=NULL,DataString=dString,ResponseString=Response,tData=tData,BestFourier=TRUE))
+  }
+  if(TryFouriers){
+    msl <- list(linModel=startLM,Names=NULL,mainEffects=NULL,Interactions=NULL,Factors=NULL,FactorInteractions=NULL,ThreeWayInters=NULL,DataString=dString,ResponseString=Response,tData=tData,BestFourier=TRUE,maxOrder=maxOrder)
+  }
+  else{
+    msl <- list(linModel=startLM,Names=NULL,mainEffects=NULL,Interactions=NULL,Factors=NULL,FactorInteractions=NULL,ThreeWayInters=NULL,DataString=dString,ResponseString=Response,tData=tData,BestFourier=FALSE)
+  }
+  added <- AddBest(tcands,tcanfacs,msl)
+  for(i in 1:30){
+    added <- AddBest(tcands,tcanfacs,added)
+    if(!is.null(added$Break))
+      break
+  }
+  print(summary(added$linModel))
+  if(nrow(tData)-1-added$linModel$df > maxdf){
     trm <- removeNterms(N=500,linModel=added$linModel,dataString=added$DataString,responseString=added$ResponseString,Tolerance=sum(sort(anova(added$linModel)$"Sum Sq"))*(1e-4),Names=added$Names,mainEffects=added$mainEffects,Interactions=added$Interactions,Factors=added$Factors,FactorInteractions=added$FactorInteractions,ThreeWayInters=added$ThreeWayInters,tData=added$tData,Fouriers = added$Fouriers)
     print(summary(trm$linModel))
     trm2 <- removeNterms(N=max(c(0,length(tData[,1])-maxdf-1-trm$linModel$df)),linModel=trm$linModel,dataString=added$DataString,responseString=added$ResponseString,Tolerance=sum(sort(anova(added$linModel)$"Sum Sq"))*(5e-1),Names=trm$Names,mainEffects=trm$mainEffects,Interactions=trm$Interactions,Factors=trm$Factors,FactorInteractions=trm$FactorInteractions,ThreeWayInters=trm$ThreeWayInters,tData=added$tData,Fouriers=trm$Fouriers)
@@ -292,7 +347,8 @@ BuildNewEmulators <- function(tData, HowManyEmulators,
                      TryFouriers=Choices[[k]]$lm.tryFouriers, 
                      maxOrder=Choices[[k]]$lm.maxOrder,
                      maxdf = tdfs[k])))
-  }
+  
+    }
   else if(meanFun == "linear"){
     if(is.null(additionalVariables))
       stop("When specifying linear meanFun, please pass the active inputs into additionalVariables")
@@ -329,12 +385,15 @@ BuildNewEmulators <- function(tData, HowManyEmulators,
   } else {
     Kernels <- lapply(1:HowManyEmulators, function(l) GetKernel(kernel[l])) 
   }
+  ### Where to Start the optimisation ###
+    Starts <- lapply(1:HowManyEmulators, function(l) GetStarts(lm.list[[l]], d=d, Choices[[l]]))
+  
   ###Establish and fit the MOGP###
   Emulators <- mogp_emulator$MultiOutputGP(inputs, targets, mean = mean_func.list.MGP,
                                            priors = Priors, inputdict = inputdict,
                                            nugget = lapply(Choices,function(e) e$Nugget), 
                                            kernel = Kernels)
-  Emulators <- mogp_emulator$fit_GP_MAP(Emulators, n_tries=1, ftol=1e-06)
+  Emulators <- mogp_emulator$fit_GP_MAP(Emulators, n_tries=1, ftol=1e-06, theta0 = Starts)
   
   ###Prepare return objects###
   Design <- tData[,1:(lastCand-1), drop = FALSE]
