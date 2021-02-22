@@ -226,7 +226,7 @@ RemoveTerm <- function(linModel, Tolerance, Names, mainEffects, Interactions, Fa
 							#There are no interactions
 							if(!any(names(ThreeWayInters)==onOpenBracket)){
 								#No three way matrices named after onOpenBracket
-								if(all(lapply(ThreeWayInters, function(e) (all(e[variableNum,]<1))&(all(e[,variableNum]<1))))){
+								if(all(unlist(lapply(ThreeWayInters, function(e) (all(e[variableNum,]<1))&(all(e[,variableNum]<1)))))){
 								#No three way interactions
 								    if(all(FactorInteractions[,variableNum]<1)){
 								    	#No factor interactions and hence OK to delete

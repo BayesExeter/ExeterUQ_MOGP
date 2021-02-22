@@ -106,8 +106,8 @@ invgamMode <- function(bound, tmode){
 
 GetStarts <- function(lm.emulator, d, Choices){
   MeanStart <- as.vector(summary(lm.emulator$linModel)$coef[,1])
-  tSig <- summary(lm.emulator$linModel)$sigma
-  c(MeanStart, rep(0,d), (1-Choices$NuggetProportion)*tSig, Choices$NuggetProportion*tSig)
+  tSig <- summary(lm.emulator$linModel)$sigma^2
+  c(MeanStart, rep(0,d), sqrt((1-Choices$NuggetProportion)*tSig), sqrt(Choices$NuggetProportion*tSig))
 }
 
 GetPriors <- function(lm.emulator, d, Choices, ActiveVariables){
@@ -256,6 +256,15 @@ EMULATE.lm <- function(Response, tData, dString="tData",maxdf=NULL,tcands=cands,
     trm$pre.Lists <- get.predict.mats(trm$linModel)
     trm$DataString <- dString
     trm$ResponseString <- Response
+    NRM <- nrow(tData) - 1 - trm$linModel$df.residual - maxdf
+    while(NRM>0){
+      trm <- removeNterms(N=NRM, linModel=trm$linModel, dataString=trm$DataString, responseString=trm$ResponseString, Tolerance=NULL, Names=trm$Names,mainEffects=trm$mainEffects, Interactions=trm$Interactions, Factors=trm$Factors, FactorInteractions=trm$FactorInteractions, ThreeWayInters=trm$ThreeWayInters, tData=added$tData, Fouriers = trm$Fouriers)
+      print(summary(trm$linModel))
+      trm$pre.Lists <- get.predict.mats(trm$linModel)
+      trm$DataString <- dString
+      trm$ResponseString <- Response
+      NRM <- nrow(tData) - 1 - trm$linModel$df.residual - maxdf
+    }
     return(trm)
   }
   else{
@@ -393,7 +402,7 @@ BuildNewEmulators <- function(tData, HowManyEmulators,
                                            priors = Priors, inputdict = inputdict,
                                            nugget = lapply(Choices,function(e) e$Nugget), 
                                            kernel = Kernels)
-  Emulators <- mogp_emulator$fit_GP_MAP(Emulators, n_tries=1, ftol=1e-06, theta0 = Starts)
+  Emulators <- mogp_emulator$fit_GP_MAP(Emulators, n_tries=1, ftol=1e-06, theta0 = Starts, maxiter=1000)
   
   ###Prepare return objects###
   Design <- tData[,1:(lastCand-1), drop = FALSE]
