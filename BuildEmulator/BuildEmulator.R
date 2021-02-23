@@ -107,7 +107,7 @@ invgamMode <- function(bound, tmode){
 GetStarts <- function(lm.emulator, d, Choices){
   MeanStart <- as.vector(summary(lm.emulator$linModel)$coef[,1])
   tSig <- summary(lm.emulator$linModel)$sigma^2
-  c(MeanStart, rep(0,d), sqrt((1-Choices$NuggetProportion)*tSig), sqrt(Choices$NuggetProportion*tSig))
+  c(MeanStart, rep(0,d), log((1-Choices$NuggetProportion)*tSig), log(Choices$NuggetProportion*tSig))
 }
 
 GetPriors <- function(lm.emulator, d, Choices, ActiveVariables){
