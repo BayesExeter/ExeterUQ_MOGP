@@ -134,6 +134,10 @@ GetPriors <- function(lm.emulator, d, Choices, ActiveVariables){
   #'@details. Sigma^2 ~ InvGamma(M,V) where we use a parameterisation of the inverse gamma based on the mode and variance. The mode is chosen so reflect the variance we can explain with simple linear fits and the variance is set using invgamMode with a bound based on the total variability in the original data. The idea behind the prior is that we allow Sigma^2 to be as large as the variance of the data so that our emulator explains none of the variability, but we expect to explain as much as could be explained by a preliminary fit of a basic model.
   #'@details The nugget distribution, if required, is found as with sigma but using the choice NuggetProportion to reflect what percentage of variability we might expect to be nugget. We may add the ability to add a user prior here. Only really important for internal variability models like climate models. Most deterministic models should use "adaptive" or "fixed" nugget. 
   p <- length(lm.emulator$linModel$coefficients)-1
+  if(p < 1){
+    #This is the case where we are fitting a constant emulator. Either this is a choice made in the call to BuildNewEmulators( ... meanFun = "constant"), or a fitted mean has chosen no linear terms in any of the parameters. In either case, we ensure default mogp use for the mean and a uniform prior. This is handled here by changing our "NonInformativeRegression" tag to TRUE (simply meaning that the code never tries to set priors to the regression coefficients when there aren't any)
+    Choices$NonInformativeRegression <- TRUE
+  }
   Priors <- lapply(1:(1+p+d+1+1), function(e) NULL)
   if(!is.null(Choices$intercept))
     print("NULL intercept fitted by default: change code")
@@ -156,6 +160,10 @@ GetPriors <- function(lm.emulator, d, Choices, ActiveVariables){
   #Sigma and nugget priors
   ModeSig <- var(lm.emulator$linModel$residuals)
   boundSig <- ModeSig/(1-summary(lm.emulator$linModel)$r.squared)
+  if(p<1){
+    #Here boundSig = ModeSig because a constant mean was fitted. Instead we allow the posterior variance to be just a little bigger than the variance in the model
+    boundSig <- 1.5*ModeSig
+  }
   if(!(Choices$NonInformativeSigma)){
     SigmaParams <- invgamMode((1-Choices$NuggetProportion)*boundSig,ModeSig)
     Sigma <- mogp_priors$InvGammaPrior(SigmaParams$alpha,SigmaParams$beta)
@@ -364,8 +372,12 @@ BuildNewEmulators <- function(tData, HowManyEmulators,
     linPredictor <- paste(additionalVariables,collapse="+")
     lm.list = lapply(1:HowManyEmulators, function(k) list(linModel=eval(parse(text=paste("lm(", paste(names(tData[lastCand+k]), linPredictor, sep="~"), ", data=tData)", sep="")))))
   }
+  else if(meanFun == "constant"){
+    #Note that this approach actually fits a constant mean via lm. This "regression" is only used for convenience in setting up the start values and ensuring a consistent structured call to mogp in the code. Another reason to handle it this way is because when the option is "fitted", a constant model can be chosen. The lm fit here is not shown to mogp (though the mle is used to start the optimisation).
+    lm.list = lapply(1:HowManyEmulators, function(k) list(linModel=eval(parse(text=paste("lm(", paste(names(tData[lastCand+k]), 1, sep="~"), ", data=tData)", sep="")))))
+  }
   else{
-    stop("meanFun must either be 'fitted' or 'linear' in this version")
+    stop("meanFun must either be 'fitted', 'linear' or 'constant' in this version")
   }
   ###Prepare the data for MOGP### 
   tfirst <- lastCand + 1
@@ -380,6 +392,9 @@ BuildNewEmulators <- function(tData, HowManyEmulators,
     ActiveVariableIndices <- lapply(lm.list, function(tlm) which((names(tData)%in%additionalVariables) | (names(tData)%in%tlm$Names) | (names(tData) %in% names(tlm$Fouriers))))
   }
   else if(meanFun == "linear"){
+    ActiveVariableIndices <- lapply(lm.list, function(tlm) which(names(tData)%in%additionalVariables))
+  }
+  else{
     ActiveVariableIndices <- lapply(lm.list, function(tlm) which(names(tData)%in%additionalVariables))
   }
   ###Prepare the mean functions for MOGP### 
