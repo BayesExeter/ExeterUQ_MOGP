@@ -374,6 +374,8 @@ BuildNewEmulators <- function(tData, HowManyEmulators,
   }
   else if(meanFun == "constant"){
     #Note that this approach actually fits a constant mean via lm. This "regression" is only used for convenience in setting up the start values and ensuring a consistent structured call to mogp in the code. Another reason to handle it this way is because when the option is "fitted", a constant model can be chosen. The lm fit here is not shown to mogp (though the mle is used to start the optimisation).
+    if(is.null(additionalVariables))
+      stop("When specifying constant meanFun, please pass the active inputs into additionalVariables")
     lm.list = lapply(1:HowManyEmulators, function(k) list(linModel=eval(parse(text=paste("lm(", paste(names(tData[lastCand+k]), 1, sep="~"), ", data=tData)", sep="")))))
   }
   else{
@@ -390,6 +392,11 @@ BuildNewEmulators <- function(tData, HowManyEmulators,
   
   if(meanFun=="fitted"){
     ActiveVariableIndices <- lapply(lm.list, function(tlm) which((names(tData)%in%additionalVariables) | (names(tData)%in%tlm$Names) | (names(tData) %in% names(tlm$Fouriers))))
+    tlengths <- unlist(lapply(ActiveVariableIndices, function(e) length(e)))
+    if(any(tlengths<1)){
+      #This happens when a constant mean is selected and no parameters seem active. We want to allow all parameters to enter the GP in this case (for now)
+      ActiveVariableIndices[[which(tlengths<1)]] <- 1:(lastCand-1)
+    }
   }
   else if(meanFun == "linear"){
     ActiveVariableIndices <- lapply(lm.list, function(tlm) which(names(tData)%in%additionalVariables))
