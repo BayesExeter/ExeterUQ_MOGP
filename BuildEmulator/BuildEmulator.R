@@ -107,7 +107,7 @@ invgamMode <- function(bound, tmode){
 GetStarts <- function(lm.emulator, d, Choices){
   MeanStart <- as.vector(summary(lm.emulator$linModel)$coef[,1])
   tSig <- summary(lm.emulator$linModel)$sigma^2
-  c(MeanStart, rep(0,d), log((1-Choices$NuggetProportion)*tSig), log(Choices$NuggetProportion*tSig))
+  c(MeanStart, rep(2.5,d), log((1-Choices$NuggetProportion)*tSig), log(Choices$NuggetProportion*tSig))
 }
 
 GetPriors <- function(lm.emulator, d, Choices, ActiveVariables){
@@ -196,8 +196,8 @@ GetKernel <- function(kernel.type = "Gaussian") {
 # lm.tryFouriers is a Boolean that indicates whether our automatic linear model fitting code should explore fourier terms.
 # lm.maxOrder specifies what degree of polynomials can be fitted in our automatic linear models code. 
 # lm.maxdf specifies how many degrees of freedom should be spent on fitting a linear model. The default is ~10% and is used if set to NULL
-choices.default <- list(NonInformativeRegression=FALSE, 
-                        NonInformativeCorrelationLengths = FALSE,
+choices.default <- list(NonInformativeRegression=TRUE, 
+                        NonInformativeCorrelationLengths = TRUE,
                         NonInformativeSigma = FALSE,
                         NonInformativeNugget = FALSE,
                         DeltaActiveMean = -0.25, DeltaActiveSigma = 0.14,
