@@ -197,10 +197,10 @@ GetKernel <- function(kernel.type = "Gaussian") {
 # lm.maxOrder specifies what degree of polynomials can be fitted in our automatic linear models code. 
 # lm.maxdf specifies how many degrees of freedom should be spent on fitting a linear model. The default is ~10% and is used if set to NULL
 choices.default <- list(NonInformativeRegression=TRUE, 
-                        NonInformativeCorrelationLengths = TRUE,
+                        NonInformativeCorrelationLengths = FALSE,
                         NonInformativeSigma = FALSE,
                         NonInformativeNugget = FALSE,
-                        DeltaActiveMean = -0.25, DeltaActiveSigma = 0.14,
+                        DeltaActiveMean = 1, DeltaActiveSigma = 1,
                         DeltaInactiveMean=-5, DeltaInactiveSigma=0.005,
                         BetaRegressMean = 0, BetaRegressSigma = 100,
                         NuggetProportion=0.05, Nugget = "fit", 
@@ -424,7 +424,7 @@ BuildNewEmulators <- function(tData, HowManyEmulators,
                                            priors = Priors, inputdict = inputdict,
                                            nugget = lapply(Choices,function(e) e$Nugget), 
                                            kernel = Kernels)
-  Emulators <- mogp_emulator$fit_GP_MAP(Emulators, n_tries=1, ftol=1e-06, theta0 = Starts, maxiter=1000)
+  Emulators <- mogp_emulator$fit_GP_MAP(Emulators, n_tries=1, ftol=1e-06, theta0 = Starts, maxiter=5000)
   
   ###Prepare return objects###
   Design <- tData[,1:(lastCand-1), drop = FALSE]
