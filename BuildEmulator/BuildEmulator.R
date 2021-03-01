@@ -745,7 +745,7 @@ LOO.plot <- function(Emulators, which.emulator=1, ParamNames,
   for(i in 1:p) {
     try(aplot <- ValidPlotNew(fit = fit.loo, x = Design[,i], y=Emulators$mogp$emulators[[which.emulator]]$targets, 
                               ObsRange = ObsRange, main = "", cex.main=0.8,
-                              xlab=ParamNames[i], log=tlogs[i]), silent=TRUE)
+                              xlab=ParamNames[i], log=tlogs[i], ylab=Emulators$fitting.elements$lm.object[[which.emulator]]$ResponseString), silent=TRUE)
     if(!inherits(aplot, "try-error") & !is.null(Obs)){
       abline(h=Obs, lty=2, col=4)
       if(is.null(ObsErr))
