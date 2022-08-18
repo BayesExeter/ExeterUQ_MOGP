@@ -155,7 +155,9 @@ CreateImpList <- function(whichVars, VarNames, ImpData, nEms=1, Resolution=c(15,
     if(combGrid[i,1] >= combGrid[i,2])
       badRows <- c(badRows,i)
   }
-  combGrid <- combGrid[-badRows,]
+  if (!is.null(badRows)) { 
+    combGrid <- combGrid[-badRows,]
+    } 
   combGrid <- combGrid[do.call(order,combGrid),]
   gridList <- lapply(whichVars[-length(whichVars)], function(k) combGrid[which(combGrid[,1]==k),])
   lapply(gridList, function(e) lapply(1:length(e[,1]), function(k) 
